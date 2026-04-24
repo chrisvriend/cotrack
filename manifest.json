@@ -2,7 +2,8 @@
   "name": "Groene Stroom Amsterdam",
   "short_name": "Groene Stroom",
   "description": "Live CO₂-intensiteit en zonnepanelen dashboard voor Amsterdam via NED.nl",
-  "start_url": "/index.html",
+  "start_url": "/cotrack/index.html",
+  "scope": "/cotrack/",
   "display": "standalone",
   "background_color": "#080f09",
   "theme_color": "#0a1a0f",
@@ -38,21 +39,12 @@
       "type": "image/png"
     }
   ],
-  "screenshots": [
-    {
-      "src": "screenshots/dashboard.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Dashboard met live CO₂-data"
-    }
-  ],
   "shortcuts": [
     {
       "name": "Dashboard",
       "short_name": "Nu",
       "description": "Bekijk de huidige CO₂-intensiteit",
-      "url": "/index.html",
+      "url": "/cotrack/index.html",
       "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     }
   ]
