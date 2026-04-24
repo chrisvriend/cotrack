@@ -1,0 +1,59 @@
+{
+  "name": "Groene Stroom Amsterdam",
+  "short_name": "Groene Stroom",
+  "description": "Live CO₂-intensiteit en zonnepanelen dashboard voor Amsterdam via NED.nl",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#080f09",
+  "theme_color": "#0a1a0f",
+  "orientation": "portrait-primary",
+  "lang": "nl",
+  "categories": ["utilities", "lifestyle"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-167.png",
+      "sizes": "167x167",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/dashboard.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Dashboard met live CO₂-data"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Nu",
+      "description": "Bekijk de huidige CO₂-intensiteit",
+      "url": "/index.html",
+      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
+    }
+  ]
+}
