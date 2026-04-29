@@ -7,628 +7,211 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Groene Stroom">
-  <meta name="description" content="Live CO₂-intensiteit en zonnepanelen dashboard voor Amsterdam">
-
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
-
   <title>Groene Stroom · Amsterdam</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-
   <style>
     :root {
-      --bg:        #080f09;
-      --bg2:       #0d1a0f;
-      --bg3:       #121f14;
-      --border:    #1e3322;
-      --green:     #3ddc6e;
-      --green-dim: #1a6635;
-      --yellow:    #f5c842;
-      --red:       #f05050;
-      --orange:    #f07830;
-      --text:      #d8edd8;
-      --muted:     #5a7a5a;
-      --card:      #0f1f11;
-      --radius:    14px;
-      --safe-top:  env(safe-area-inset-top, 0px);
-      --safe-bot:  env(safe-area-inset-bottom, 0px);
+      --bg:     #080f09;
+      --bg2:    #0d1a0f;
+      --card:   #0f1f11;
+      --border: #1e3322;
+      --text:   #d8edd8;
+      --muted:  #5a7a5a;
+      --solar:  #f5c842;
+      --radius: 14px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
     }
+    /* CO2 drempelwaarden — gebaseerd op EU-taxonomie & NL-gemiddelde:
+       <100  groen   (EU taxonomy grens)
+       <200  lichtgroen (beter dan NL-jaargemiddelde ~270g)
+       <300  geel    (rond NL-gemiddelde)
+       <400  oranje  (boven gemiddeld, gas-zwaar)
+       ≥400  rood    (hoge fossiele piekbelasting) */
 
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html,body { height:100%; background:var(--bg); color:var(--text); font-family:'DM Mono',monospace; overscroll-behavior:none; }
+    body { display:flex; flex-direction:column; min-height:100dvh; padding-top:var(--safe-top); padding-bottom:var(--safe-bot); }
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'DM Mono', monospace;
-      overscroll-behavior: none;
-    }
+    .topbar { display:flex; align-items:center; justify-content:space-between; padding:14px 20px 10px; border-bottom:1px solid var(--border); background:var(--bg); position:sticky; top:0; z-index:100; }
+    .app-name { font-family:'Instrument Serif',serif; font-size:20px; color:#22c55e; }
+    .app-sub  { font-size:10px; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-top:1px; }
+    .refresh-btn { width:38px; height:38px; border-radius:50%; border:1px solid var(--border); background:var(--card); color:#22c55e; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .refresh-btn.spinning { animation:spin 0.8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
 
-    body {
-      display: flex;
-      flex-direction: column;
-      min-height: 100dvh;
-      padding-top: var(--safe-top);
-      padding-bottom: var(--safe-bot);
-    }
+    .scroll { flex:1; overflow-y:auto; padding-bottom:80px; }
 
-    /* ── TOP BAR ── */
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 20px 10px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-    .topbar-left { display: flex; flex-direction: column; }
-    .app-name {
-      font-family: 'Instrument Serif', serif;
-      font-size: 20px;
-      color: var(--green);
-      letter-spacing: -0.01em;
-    }
-    .app-sub {
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .refresh-btn {
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--green);
-      font-size: 16px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.3s;
-    }
-    .refresh-btn.spinning { animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* NOW STRIP */
+    .now-strip { margin:16px 16px 0; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+    .now-item  { text-align:center; }
+    .now-label { font-size:9px; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+    .now-val   { font-family:'Instrument Serif',serif; font-size:28px; line-height:1; }
+    .now-unit  { font-size:9px; color:var(--muted); margin-top:2px; }
+    .now-badge { font-size:10px; margin-top:5px; padding:2px 7px; border-radius:20px; display:inline-block; }
 
-    /* ── SCROLL CONTAINER ── */
-    .scroll { flex: 1; overflow-y: auto; padding: 0 0 80px; }
+    /* BEST BANNER */
+    .best-banner { margin:10px 16px 0; background:linear-gradient(135deg,#0a2214,#0d2a18); border:1px solid #1a5530; border-left:3px solid #22c55e; border-radius:var(--radius); padding:14px 16px; display:flex; align-items:center; gap:12px; }
+    .best-icon  { font-size:22px; }
+    .best-text  { flex:1; }
+    .best-title { font-size:10px; color:#22c55e; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:3px; }
+    .best-time  { font-family:'Instrument Serif',serif; font-size:22px; color:var(--text); line-height:1; }
+    .best-sub   { font-size:10px; color:var(--muted); margin-top:3px; }
+    .best-pill  { background:#0a2a14; color:#22c55e; font-size:11px; padding:4px 10px; border-radius:20px; white-space:nowrap; border:1px solid #1a5530; }
 
-    /* ── NOW STRIP ── */
-    .now-strip {
-      margin: 16px 16px 0;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 18px;
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-    }
-    .now-item { text-align: center; }
-    .now-label {
-      font-size: 9px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-    .now-val {
-      font-family: 'Instrument Serif', serif;
-      font-size: 28px;
-      line-height: 1;
-    }
-    .now-unit { font-size: 9px; color: var(--muted); margin-top: 2px; }
-    .now-badge {
-      font-size: 10px;
-      margin-top: 4px;
-      padding: 2px 6px;
-      border-radius: 20px;
-      display: inline-block;
-    }
+    /* SECTION HEAD */
+    .sh { margin:20px 16px 10px; font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); display:flex; align-items:center; gap:8px; }
+    .sh::after { content:''; flex:1; height:1px; background:var(--border); }
 
-    /* ── BEST WINDOW BANNER ── */
-    .best-banner {
-      margin: 10px 16px 0;
-      background: linear-gradient(135deg, #0a2214, #0d2a18);
-      border: 1px solid var(--green-dim);
-      border-left: 3px solid var(--green);
-      border-radius: var(--radius);
-      padding: 14px 18px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-    .best-icon { font-size: 22px; }
-    .best-text { flex: 1; }
-    .best-title {
-      font-size: 11px;
-      color: var(--green);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      margin-bottom: 3px;
-    }
-    .best-time {
-      font-family: 'Instrument Serif', serif;
-      font-size: 22px;
-      color: var(--text);
-      line-height: 1;
-    }
-    .best-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
-    .best-saving {
-      background: var(--green-dim);
-      color: var(--green);
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      white-space: nowrap;
-    }
+    /* CO2 CHART */
+    .chart-card { margin:0 16px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 12px 12px; }
+    .co2-bars { display:flex; align-items:flex-end; height:110px; gap:2px; margin-bottom:6px; }
+    .b { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; position:relative; cursor:pointer; }
+    .bi { width:100%; border-radius:3px 3px 0 0; min-height:3px; }
+    .b.now .bi { box-shadow:0 0 10px rgba(34,197,94,0.4); }
+    .b.best .bi { outline:1px solid #22c55e; outline-offset:1px; }
+    .bh { font-size:7px; color:var(--muted); margin-top:3px; }
+    .b.now .bh { color:#22c55e; }
+    .co2-legend { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+    .leg { display:flex; align-items:center; gap:5px; font-size:9px; color:var(--muted); }
+    .ld  { width:8px; height:8px; border-radius:2px; }
 
-    /* ── SECTION HEADER ── */
-    .section-head {
-      margin: 20px 16px 10px;
-      font-size: 9px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .section-head::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
+    /* THRESHOLD NOTE */
+    .thr-note { margin:8px 16px 0; font-size:10px; color:var(--muted); line-height:1.6; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px 14px; }
+    .thr-note strong { color:var(--text); }
 
-    /* ── CO2 CHART ── */
-    .chart-card {
-      margin: 0 16px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 14px 12px;
-    }
-    .chart-bars {
-      display: flex;
-      align-items: flex-end;
-      height: 100px;
-      gap: 2px;
-      margin-bottom: 6px;
-    }
-    .bar-col {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
-      height: 100%;
-      position: relative;
-      cursor: pointer;
-    }
-    .bar-inner {
-      width: 100%;
-      border-radius: 3px 3px 0 0;
-      transition: opacity 0.2s;
-      min-height: 3px;
-      position: relative;
-      overflow: hidden;
-    }
-    .bar-solar {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      background: rgba(245, 200, 66, 0.4);
-      border-top: 1px solid rgba(245, 200, 66, 0.7);
-      border-radius: 3px 3px 0 0;
-    }
-    .bar-col.is-now .bar-inner {
-      box-shadow: 0 0 10px rgba(61, 220, 110, 0.5);
-    }
-    .bar-col.is-best .bar-inner {
-      outline: 1px solid var(--green);
-      outline-offset: 1px;
-    }
-    .bar-hour {
-      font-size: 7px;
-      color: var(--muted);
-      margin-top: 3px;
-    }
-    .bar-col.is-now .bar-hour { color: var(--green); }
+    /* SOLAR CHART */
+    .solar-card { margin:0 16px; background:#0d0d00; border:1px solid #2a2800; border-radius:var(--radius); padding:16px 12px 14px; }
+    .solar-hdr  { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
+    .solar-ttl  { font-family:'Instrument Serif',serif; font-size:16px; color:var(--solar); }
+    .solar-tot  { font-size:10px; background:#1a1800; color:#c8a020; padding:3px 10px; border-radius:20px; border:1px solid #3a3000; }
+    .solar-sub  { font-size:10px; color:var(--muted); margin-bottom:14px; }
+    .solar-bars { display:flex; align-items:flex-end; height:90px; gap:2px; margin-bottom:6px; }
+    .sb  { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; cursor:pointer; }
+    .sbi { width:100%; border-radius:3px 3px 0 0; min-height:0; }
+    .sbh { font-size:7px; color:var(--muted); margin-top:3px; }
+    .sb.now .sbh { color:var(--solar); }
+    .solar-times { display:flex; justify-content:space-between; font-size:9px; color:var(--muted); margin-top:2px; padding-bottom:12px; border-bottom:1px solid #1a1800; margin-bottom:12px; }
+    .solar-groups { display:flex; flex-direction:column; gap:7px; margin-bottom:12px; }
+    .sg-row { display:flex; align-items:center; gap:8px; font-size:10px; flex-wrap:wrap; }
+    .sg-bar { height:7px; border-radius:3px; flex-shrink:0; }
+    .sg-lbl { color:var(--text); }
+    .sg-kwp { color:var(--muted); }
+    .sg-yield { color:var(--solar); }
+    .sg-pct { color:var(--muted); }
+    .solar-stats { display:grid; grid-template-columns:repeat(3,1fr); padding-top:12px; border-top:1px solid #1a1800; }
+    .ss { text-align:center; }
+    .ss-val { font-family:'Instrument Serif',serif; font-size:20px; color:var(--solar); display:block; }
+    .ss-lbl { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; }
 
-    /* Tooltip */
-    .tooltip {
-      position: fixed;
-      background: #1a2f1c;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 11px;
-      color: var(--text);
-      pointer-events: none;
-      z-index: 200;
-      white-space: nowrap;
-      display: none;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
+    /* TIPS */
+    .tips { margin:0 16px; display:flex; flex-direction:column; gap:10px; }
+    .tip { display:flex; gap:12px; padding:13px 14px; background:var(--card); border-radius:var(--radius); border-left:3px solid; font-size:11px; color:#8aaa8a; line-height:1.55; }
+    .tip strong { color:var(--text); }
+    .tip.g { border-color:#22c55e; background:#050e07; }
+    .tip.y { border-color:var(--solar); background:#0a0900; }
+    .tip.r { border-color:#f05050; background:#0f0808; }
+    .ti { font-size:16px; flex-shrink:0; margin-top:1px; }
 
-    .chart-legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 14px;
-      margin-top: 10px;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 9px;
-      color: var(--muted);
-    }
-    .legend-dot {
-      width: 8px; height: 8px;
-      border-radius: 2px;
-    }
+    .status-bar { text-align:center; font-size:9px; color:var(--muted); padding:12px 16px 4px; }
 
-    /* ── MIX BARS (hernieuwbaar) ── */
-    .mix-card {
-      margin: 0 16px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px 14px 12px;
-    }
-    .mix-bars {
-      display: flex;
-      align-items: flex-end;
-      height: 48px;
-      gap: 2px;
-    }
-    .mix-col {
-      flex: 1;
-      border-radius: 2px 2px 0 0;
-      min-height: 2px;
-      transition: opacity 0.2s;
-    }
+    .tooltip { position:fixed; background:#1a2f1c; border:1px solid var(--border); border-radius:8px; padding:7px 11px; font-size:11px; color:var(--text); pointer-events:none; z-index:200; white-space:nowrap; display:none; box-shadow:0 4px 20px rgba(0,0,0,0.5); }
 
-    /* ── SOLAR CARD ── */
-    .solar-card {
-      margin: 0 16px;
-      background: #130f00;
-      border: 1px solid #3a2f00;
-      border-radius: var(--radius);
-      padding: 16px 18px;
-    }
-    .solar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 14px;
-    }
-    .solar-title {
-      font-family: 'Instrument Serif', serif;
-      font-size: 17px;
-      color: var(--yellow);
-    }
-    .solar-badge {
-      font-size: 10px;
-      background: #2a2000;
-      color: #c8a020;
-      padding: 3px 9px;
-      border-radius: 20px;
-    }
-    .solar-bars {
-      display: flex;
-      align-items: flex-end;
-      height: 52px;
-      gap: 2px;
-      margin-bottom: 8px;
-    }
-    .solar-bar-col {
-      flex: 1;
-      border-radius: 2px 2px 0 0;
-      min-height: 0;
-    }
-    .solar-times {
-      display: flex;
-      justify-content: space-between;
-      font-size: 9px;
-      color: var(--muted);
-      margin-bottom: 14px;
-    }
-    .solar-stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0;
-      border-top: 1px solid #2a2a10;
-      padding-top: 12px;
-    }
-    .solar-stat { text-align: center; }
-    .solar-stat-val {
-      font-family: 'Instrument Serif', serif;
-      font-size: 20px;
-      color: var(--yellow);
-      display: block;
-    }
-    .solar-stat-lbl {
-      font-size: 9px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
+    .bottom-nav { position:fixed; bottom:0; left:0; right:0; padding:10px 0; padding-bottom:calc(10px + var(--safe-bot)); background:var(--bg); border-top:1px solid var(--border); display:flex; justify-content:space-around; z-index:100; }
+    .ni { display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; padding:4px 16px; border-radius:10px; }
+    .ni.active .nico,.ni.active .nlbl { color:#22c55e; }
+    .nico { font-size:20px; color:var(--muted); }
+    .nlbl { font-size:9px; color:var(--muted); letter-spacing:0.05em; text-transform:uppercase; }
 
-    /* ── TIPS ── */
-    .tips-wrap { margin: 0 16px; display: flex; flex-direction: column; gap: 10px; }
-    .tip {
-      display: flex;
-      gap: 12px;
-      padding: 13px 15px;
-      background: var(--card);
-      border-radius: var(--radius);
-      border-left: 3px solid;
-      font-size: 11px;
-      color: #8aaa8a;
-      line-height: 1.55;
-    }
-    .tip strong { color: var(--text); }
-    .tip.green  { border-color: var(--green);  background: #080f09; }
-    .tip.yellow { border-color: var(--yellow); background: #0d0c00; }
-    .tip.red    { border-color: var(--red);    background: #0f0808; }
-    .tip.blue   { border-color: #60a0f0;       background: #08090f; }
-    .tip-icon   { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .view { display:none; }
+    .view.active { display:block; }
 
-    /* ── BOTTOM NAV ── */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0; right: 0;
-      padding: 10px 0;
-      padding-bottom: calc(10px + var(--safe-bot));
-      background: var(--bg);
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: space-around;
-      z-index: 100;
-    }
-    .nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      cursor: pointer;
-      padding: 4px 16px;
-      border-radius: 10px;
-      transition: background 0.15s;
-    }
-    .nav-item.active .nav-icon { color: var(--green); }
-    .nav-item.active .nav-lbl  { color: var(--green); }
-    .nav-icon { font-size: 20px; color: var(--muted); }
-    .nav-lbl  { font-size: 9px; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+    /* PROGNOSE */
+    .pr { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+    .pr-h { width:30px; font-size:10px; color:var(--muted); text-align:right; flex-shrink:0; }
+    .pr-t { flex:1; height:16px; background:var(--bg2); border-radius:4px; overflow:hidden; }
+    .pr-f { height:100%; border-radius:4px; }
+    .pr-v { width:58px; font-size:10px; text-align:right; flex-shrink:0; }
 
-    /* ── VIEWS ── */
-    .view { display: none; }
-    .view.active { display: block; }
+    /* INSTELLINGEN */
+    .sw { padding:16px; }
+    .sc { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:14px; }
+    .st { font-size:9px; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); padding:12px 16px 8px; border-bottom:1px solid var(--border); }
+    .sr { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border); gap:10px; }
+    .sr:last-child { border-bottom:none; }
+    .sr label { font-size:12px; color:var(--text); }
+    .sh2 { font-size:10px; color:var(--muted); margin-top:2px; }
+    .si { background:var(--bg2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'DM Mono',monospace; font-size:11px; padding:8px 10px; outline:none; }
+    .si:focus { border-color:#22c55e; }
+    .pg-wrap { padding:12px 16px; }
+    .pg { display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+    .pg label { font-size:11px; color:var(--muted); width:60px; }
+    .del { background:none; border:1px solid #3a1010; border-radius:6px; color:#f05050; font-size:13px; padding:2px 8px; cursor:pointer; }
+    .add { background:var(--bg2); border:1px solid var(--border); border-radius:8px; color:#22c55e; font-size:11px; padding:8px 14px; cursor:pointer; width:100%; margin-top:4px; }
+    .save { width:100%; padding:14px; background:#0a2014; border:1px solid #22c55e; border-radius:var(--radius); color:#22c55e; font-family:'DM Mono',monospace; font-size:13px; letter-spacing:0.1em; cursor:pointer; }
 
-    /* ── INSTELLINGEN ── */
-    .settings-wrap { padding: 16px; }
-    .settings-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 14px;
-    }
-    .settings-title {
-      font-size: 9px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--muted);
-      padding: 12px 16px 8px;
-      border-bottom: 1px solid var(--border);
-    }
-    .settings-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-      gap: 12px;
-    }
-    .settings-row:last-child { border-bottom: none; }
-    .settings-row label { font-size: 12px; color: var(--text); }
-    .settings-row .hint { font-size: 10px; color: var(--muted); margin-top: 2px; }
-    .settings-input {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      padding: 8px 12px;
-      width: 180px;
-      outline: none;
-    }
-    .settings-input:focus { border-color: var(--green); }
-    .save-btn {
-      width: 100%;
-      padding: 14px;
-      background: var(--green-dim);
-      border: 1px solid var(--green);
-      border-radius: var(--radius);
-      color: var(--green);
-      font-family: 'DM Mono', monospace;
-      font-size: 13px;
-      letter-spacing: 0.1em;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .save-btn:active { background: #2a5535; }
+    .loading { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:220px; gap:14px; color:var(--muted); font-size:12px; text-align:center; padding:20px; line-height:1.6; }
+    .spinner { width:32px; height:32px; border:2px solid var(--border); border-top-color:#22c55e; border-radius:50%; animation:spin 0.8s linear infinite; }
 
-    /* ── STATUS BAR ── */
-    .status-bar {
-      text-align: center;
-      font-size: 9px;
-      color: var(--muted);
-      padding: 8px;
-      letter-spacing: 0.05em;
-    }
+    .install-banner { margin:10px 16px 0; background:#0a1020; border:1px solid #2040a0; border-radius:var(--radius); padding:12px 14px; display:none; align-items:center; gap:10px; }
+    .install-banner.show { display:flex; }
+    .install-txt { flex:1; font-size:11px; color:#90b0f0; line-height:1.4; }
+    .install-btn { background:#1a40c0; border:none; border-radius:8px; color:#fff; font-family:'DM Mono',monospace; font-size:11px; padding:8px 12px; cursor:pointer; }
 
-    /* ── LOADING / ERROR ── */
-    .loading {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 200px;
-      gap: 14px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .spinner {
-      width: 32px; height: 32px;
-      border: 2px solid var(--border);
-      border-top-color: var(--green);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    /* ── INSTALL BANNER ── */
-    .install-banner {
-      margin: 10px 16px 0;
-      background: #0a1020;
-      border: 1px solid #2040a0;
-      border-radius: var(--radius);
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      display: none;
-    }
-    .install-banner.show { display: flex; }
-    .install-txt { flex: 1; font-size: 11px; color: #90b0f0; line-height: 1.4; }
-    .install-btn {
-      background: #1a40c0;
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      padding: 8px 14px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .install-close {
-      color: var(--muted);
-      font-size: 18px;
-      cursor: pointer;
-      line-height: 1;
-    }
-
-    /* ── TABLET / DESKTOP ── */
-    @media (min-width: 600px) {
-      .now-strip { grid-template-columns: repeat(3, 1fr); }
-      .app-name { font-size: 24px; }
-    }
-    @media (min-width: 900px) {
-      body { max-width: 680px; margin: 0 auto; }
-      .bottom-nav { max-width: 680px; margin: 0 auto; }
-    }
+    @media (min-width:900px) { body,.bottom-nav { max-width:680px; margin:0 auto; } }
   </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
 <div class="topbar">
-  <div class="topbar-left">
+  <div>
     <div class="app-name">Groene Stroom</div>
     <div class="app-sub" id="last-update">Amsterdam · laden...</div>
   </div>
-  <button class="refresh-btn" id="refresh-btn" onclick="refreshData()" title="Vernieuwen">↻</button>
+  <button class="refresh-btn" id="rbtn" onclick="refresh()">↻</button>
 </div>
 
-<!-- INSTALL BANNER (Android Chrome) -->
-<div class="install-banner" id="install-banner">
+<div class="install-banner" id="ibanner">
   <span>📲</span>
-  <div class="install-txt">Installeer als app op je thuisscherm voor snelle toegang</div>
-  <button class="install-btn" id="install-btn">Installeer</button>
-  <span class="install-close" onclick="document.getElementById('install-banner').classList.remove('show')">×</span>
+  <div class="install-txt">Installeer als app op je startscherm</div>
+  <button class="install-btn" id="ibtn">Installeer</button>
+  <span style="color:var(--muted);font-size:18px;cursor:pointer;" onclick="this.parentElement.classList.remove('show')">×</span>
 </div>
 
-<!-- TOOLTIP -->
-<div class="tooltip" id="tooltip"></div>
+<div class="tooltip" id="tip"></div>
 
-<!-- SCROLL AREA -->
-<div class="scroll" id="scroll-area">
+<div class="scroll" id="scroll">
 
-  <!-- ── DASHBOARD VIEW ── -->
   <div class="view active" id="view-dashboard">
-    <div class="loading" id="loading-state">
+    <div class="loading" id="loading">
       <div class="spinner"></div>
-      <div>Data ophalen van NED.nl...</div>
+      <div id="lmsg">Data ophalen van NED.nl...</div>
     </div>
-    <div id="dashboard-content" style="display:none;">
-      <!-- dynamisch gevuld -->
-    </div>
+    <div id="dash" style="display:none;"></div>
   </div>
 
-  <!-- ── PROGNOSE VIEW ── -->
   <div class="view" id="view-prognose">
-    <div id="prognose-content" style="padding:16px; color:var(--muted); font-size:12px;">Laden...</div>
+    <div id="prog-content" style="padding:16px;color:var(--muted);font-size:12px;">Laden...</div>
   </div>
 
-  <!-- ── INSTELLINGEN VIEW ── -->
   <div class="view" id="view-settings">
-    <div class="settings-wrap">
-      <div class="settings-card">
-        <div class="settings-title">NED.nl API</div>
-        <div class="settings-row">
-          <div>
-            <div class="settings-row" style="padding:0; border:none; flex-direction:column; align-items:flex-start;">
-              <label>API Sleutel</label>
-              <div class="hint">Vind je op ned.nl → Mijn account → API</div>
-            </div>
-          </div>
-          <input class="settings-input" id="api-key-input" type="password" placeholder="Jouw NED.nl sleutel">
+    <div class="sw">
+
+      <div class="sc">
+        <div class="st">NED.nl API</div>
+        <div class="sr" style="flex-direction:column;align-items:flex-start;gap:8px;">
+          <div><label>API Sleutel</label><div class="sh2">ned.nl → Mijn account → API</div></div>
+          <input class="si" id="s-key" type="password" style="width:100%;max-width:280px;" placeholder="Jouw NED.nl sleutel" autocomplete="off">
         </div>
       </div>
-      <div class="settings-card">
-        <div class="settings-title">Zonnepanelen</div>
-        <div class="settings-row">
-          <div>
-            <label>Vermogen (kWp)</label>
-            <div class="hint">Totaal geïnstalleerd vermogen</div>
-          </div>
-          <input class="settings-input" id="kwp-input" type="number" placeholder="bijv. 6" style="width:100px;">
-        </div>
-        <div class="settings-row">
-          <div>
-            <label>Oriëntatie</label>
-            <div class="hint">Richting van de panelen</div>
-          </div>
-          <select class="settings-input" id="orient-input" style="width:130px;">
-            <option value="Z">Zuid ↓</option>
-            <option value="ZO">Zuid-Oost ↘</option>
-            <option value="ZW">Zuid-West ↙</option>
-            <option value="O">Oost →</option>
-            <option value="W">West ←</option>
-          </select>
-        </div>
-      </div>
-      <div class="settings-card">
-        <div class="settings-title">Locatie</div>
-        <div class="settings-row">
-          <div>
-            <label>Provincie</label>
-            <div class="hint">Voor zonne-opbrengst prognose</div>
-          </div>
-          <select class="settings-input" id="province-input" style="width:160px;">
+
+      <div class="sc">
+        <div class="st">Provincie</div>
+        <div class="sr">
+          <div><label>Locatie</label><div class="sh2">Voor zonne-opbrengst prognose</div></div>
+          <select class="si" id="s-prov" style="width:150px;">
             <option value="8">Noord-Holland</option>
             <option value="9">Zuid-Holland</option>
             <option value="10">Utrecht</option>
@@ -644,555 +227,377 @@
           </select>
         </div>
       </div>
-      <button class="save-btn" onclick="saveSettings()">✓ &nbsp;Instellingen opslaan & data vernieuwen</button>
 
-      <div style="margin-top:20px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; font-size:11px; color:var(--muted); line-height:1.6;">
-        <strong style="color:var(--text);">📲 App installeren</strong><br><br>
-        <strong style="color:#90b0f0;">Android:</strong> Chrome → ⋮ menu → "Toevoegen aan startscherm"<br><br>
-        <strong style="color:#90b0f0;">iPad / iPhone:</strong> Safari → Deel knop (□↑) → "Zet op beginscherm"<br><br>
-        <strong style="color:#90b0f0;">Gegevens:</strong> Alle instellingen worden lokaal opgeslagen op dit apparaat.
+      <div class="sc">
+        <div class="st">Zonnepanelen — oriëntatie & vermogen</div>
+        <div class="sh2" style="padding:10px 16px;border-bottom:1px solid var(--border);line-height:1.5;">
+          Voeg per dakvlak een groep toe. Wordt gebruikt voor de kWh-opbrengst berekening.
+        </div>
+        <div class="pg-wrap" id="pge"></div>
+        <div style="padding:0 16px 14px;">
+          <button class="add" onclick="addGroup()">+ Dakvlak toevoegen</button>
+        </div>
+      </div>
+
+      <button class="save" onclick="saveSettings()">✓ &nbsp;Opslaan & vernieuwen</button>
+
+      <div style="margin-top:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-size:11px;color:var(--muted);line-height:1.8;">
+        <strong style="color:var(--text);">CO₂-drempelwaarden (NL-context)</strong><br>
+        🟢 &lt;100 g/kWh — EU-taxonomie: "groene" stroom<br>
+        🟩 &lt;200 g/kWh — Beter dan NL-jaargemiddelde (±270 g)<br>
+        🟡 &lt;300 g/kWh — Rond het NL-gemiddelde<br>
+        🟠 &lt;400 g/kWh — Boven gemiddeld, gas-zwaar<br>
+        🔴 ≥400 g/kWh — Hoge fossiele piekbelasting<br>
+        <br>
+        <strong style="color:var(--text);">App installeren</strong><br>
+        <span style="color:#90b0f0;">Android (Chrome):</span> ⋮ → Toevoegen aan startscherm<br>
+        <span style="color:#90b0f0;">iPad / iPhone (Safari):</span> □↑ Delen → Zet op beginscherm
       </div>
     </div>
   </div>
 
 </div>
 
-<!-- BOTTOM NAV -->
 <div class="bottom-nav">
-  <div class="nav-item active" onclick="switchView('dashboard', this)">
-    <div class="nav-icon">◉</div>
-    <div class="nav-lbl">Nu</div>
-  </div>
-  <div class="nav-item" onclick="switchView('prognose', this)">
-    <div class="nav-icon">◈</div>
-    <div class="nav-lbl">Prognose</div>
-  </div>
-  <div class="nav-item" onclick="switchView('settings', this)">
-    <div class="nav-icon">◎</div>
-    <div class="nav-lbl">Instellingen</div>
-  </div>
+  <div class="ni active" onclick="switchView('dashboard',this)"><div class="nico">◉</div><div class="nlbl">Nu</div></div>
+  <div class="ni" onclick="switchView('prognose',this)"><div class="nico">◈</div><div class="nlbl">Prognose</div></div>
+  <div class="ni" onclick="switchView('settings',this)"><div class="nico">◎</div><div class="nlbl">Instellingen</div></div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════
-//  STATE & INSTELLINGEN
-// ══════════════════════════════════════════════════════
-let STATE = {
-  apiKey:    localStorage.getItem('ned_api_key') || '',
-  kwp:       parseFloat(localStorage.getItem('kwp') || '6'),
-  orient:    localStorage.getItem('orient') || 'Z',
-  province:  localStorage.getItem('province') || '8',
-  data:      null,
-  lastFetch: null,
-};
+// ── ORIËNTATIES ──────────────────────────────────────
+const ORI = [
+  { code:'Z',  label:'Zuid',      az:180, f:1.00 },
+  { code:'ZW', label:'Zuid-West', az:225, f:0.90 },
+  { code:'ZO', label:'Zuid-Oost', az:135, f:0.90 },
+  { code:'W',  label:'West',      az:270, f:0.72 },
+  { code:'O',  label:'Oost',      az:90,  f:0.72 },
+  { code:'N',  label:'Noord',     az:0,   f:0.32 },
+];
 
-// Laad instellingenvelden
-document.getElementById('api-key-input').value  = STATE.apiKey;
-document.getElementById('kwp-input').value       = STATE.kwp;
-document.getElementById('orient-input').value    = STATE.orient;
-document.getElementById('province-input').value  = STATE.province;
-
-function saveSettings() {
-  STATE.apiKey   = document.getElementById('api-key-input').value.trim();
-  STATE.kwp      = parseFloat(document.getElementById('kwp-input').value) || 6;
-  STATE.orient   = document.getElementById('orient-input').value;
-  STATE.province = document.getElementById('province-input').value;
-  localStorage.setItem('ned_api_key', STATE.apiKey);
-  localStorage.setItem('kwp',         STATE.kwp);
-  localStorage.setItem('orient',      STATE.orient);
-  localStorage.setItem('province',    STATE.province);
-  switchView('dashboard', document.querySelector('.nav-item'));
-  refreshData();
-}
-
-// ══════════════════════════════════════════════════════
-//  NAVIGATIE
-// ══════════════════════════════════════════════════════
-function switchView(name, el) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
-  el.classList.add('active');
-  document.getElementById('scroll-area').scrollTop = 0;
-}
-
-// ══════════════════════════════════════════════════════
-//  DATA OPHALEN
-// ══════════════════════════════════════════════════════
-const NED_BASE = 'https://api.ned.nl/v1/utilizations';
-
-async function nedFetch(point, type, classification) {
-  const nu      = new Date();
-  const vandaag = dateStr(nu, 0);
-  const morgen  = dateStr(nu, 1);
-
-  const params = new URLSearchParams({
-    point, type,
-    granularity: 5,
-    granularitytimezone: 1,
-    classification,
-    activity: 1,
-    'validfrom[after]': vandaag,
-    'validfrom[strictly_before]': morgen,
-  });
-
-  const resp = await fetch(`${NED_BASE}?${params}`, {
-    headers: { 'X-AUTH-TOKEN': STATE.apiKey, 'accept': 'application/json' }
-  });
-  if (!resp.ok) throw new Error(`NED HTTP ${resp.status}`);
-  const d = await resp.json();
-  return Array.isArray(d) ? d : (d['hydra:member'] || []);
-}
-
-function dateStr(d, offset) {
-  const dt = new Date(d.getTime() + offset * 86400000);
-  return dt.toISOString().slice(0, 10);
-}
-
-function recordToHour(rec) {
-  const dt = new Date(rec.validfrom);
-  const mo = dt.getUTCMonth() + 1;
-  return (dt.getUTCHours() + ((mo >= 4 && mo <= 10) ? 2 : 1)) % 24;
-}
-
-async function fetchAllData() {
-  if (!STATE.apiKey) {
-    return { error: 'no-key' };
-  }
-  try {
-    const [mixData, solarData, windData, windOffData] = await Promise.all([
-      nedFetch(0, 27, 1),                          // ElectricityMix NL forecast
-      nedFetch(parseInt(STATE.province), 2, 1),    // Solar provincie forecast
-      nedFetch(0, 1, 1),                           // Wind op land forecast
-      nedFetch(0, 51, 1),                          // Wind op zee forecast
-    ]);
-
-    const uren = Array.from({length: 24}, (_, h) => ({
-      h, co2: 0, solar: 0, wind: 0, windOff: 0,
-      totaal: 0, pctGroen: 0
-    }));
-
-    mixData.forEach(r => {
-      const h = recordToHour(r);
-      if (h < 24) {
-        uren[h].co2    = r.emissionfactor ? Math.round(r.emissionfactor * 1000) : 0;
-        uren[h].totaal = r.capacity || 0;
-      }
-    });
-    solarData.forEach(r => {
-      const h = recordToHour(r);
-      if (h < 24) uren[h].solar = r.capacity || 0;
-    });
-    windData.forEach(r => {
-      const h = recordToHour(r);
-      if (h < 24) uren[h].wind = r.capacity || 0;
-    });
-    windOffData.forEach(r => {
-      const h = recordToHour(r);
-      if (h < 24) uren[h].windOff = r.capacity || 0;
-    });
-
-    // Fallback CO2 als NED weinig data geeft
-    const heeftCO2 = uren.filter(u => u.co2 > 0).length;
-    if (heeftCO2 < 6) vulFallbackCO2(uren);
-
-    // % hernieuwbaar
-    uren.forEach(u => {
-      const groen = u.solar + u.wind + u.windOff;
-      u.pctGroen = u.totaal > 0 ? Math.min(100, Math.round(groen / u.totaal * 100)) : 0;
-    });
-
-    // Zontijden berekenen
-    const zon = berekenZon(new Date());
-
-    // Open-Meteo bewolking (optioneel, geen key nodig)
-    let bewolking = Array(24).fill(40);
-    try {
-      const omResp = await fetch(
-        'https://api.open-meteo.com/v1/forecast?latitude=52.3676&longitude=4.9041' +
-        '&hourly=cloudcover&timezone=Europe%2FAmsterdam&forecast_days=1'
-      );
-      if (omResp.ok) {
-        const om = await omResp.json();
-        bewolking = om.hourly?.cloudcover || bewolking;
-      }
-    } catch(e) {}
-
-    return { uren, zon, bewolking, error: null };
-
-  } catch(e) {
-    console.error(e);
-    return { error: e.message };
-  }
-}
-
-function vulFallbackCO2(uren) {
-  const basis = [385,375,368,362,360,355,342,322,282,244,205,195,
-                 192,190,198,212,232,262,305,338,362,375,383,388];
-  uren.forEach((u, h) => { if (u.co2 === 0) u.co2 = basis[h]; });
-}
-
-// ══════════════════════════════════════════════════════
-//  ZON BEREKENING
-// ══════════════════════════════════════════════════════
-function berekenZon(d) {
-  const dag = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5);
-  const B   = (360/365) * (dag - 81) * Math.PI / 180;
-  const eqT = 9.87*Math.sin(2*B) - 7.53*Math.cos(B) - 1.5*Math.sin(B);
-  const lat = 52.3676 * Math.PI / 180;
-  const decl = 23.45 * Math.sin(B) * Math.PI / 180;
-  const ha  = Math.acos(Math.max(-1, Math.min(1, -Math.tan(lat)*Math.tan(decl)))) * 180/Math.PI;
-  const mo  = d.getMonth() + 1;
-  const tz  = (mo >= 4 && mo <= 10) ? 2 : 1;
-  const cor = (4*(15*tz - 4.9041))/60 - eqT/60;
-  const op  = 12 - ha/15 + cor;
-  const ond = 12 + ha/15 + cor;
-  return { op, ond, daguren: ond - op,
-           opStr: h2t(op), ondStr: h2t(ond), midStr: h2t((op+ond)/2) };
-}
-function h2t(h) {
-  return `${Math.floor(h).toString().padStart(2,'0')}:${Math.round((h%1)*60).toString().padStart(2,'0')}`;
-}
-
-// ══════════════════════════════════════════════════════
-//  KLEUREN & HELPERS
-// ══════════════════════════════════════════════════════
-function co2Kleur(v) {
-  if (v < 150) return '#22c55e';
-  if (v < 250) return '#4ade80';
-  if (v < 350) return '#f5c842';
-  if (v < 450) return '#f07830';
+// ── CO2 KLEUR (EU-taxonomie + NL-gemiddelde als referentie) ──
+function co2k(v) {
+  if (v<100) return '#22c55e';
+  if (v<200) return '#86efac';
+  if (v<300) return '#f5c842';
+  if (v<400) return '#f07830';
   return '#f05050';
 }
-function co2Label(v) {
-  if (v < 150) return { lbl: 'Uitstekend', kleur: '#22c55e', bg: '#0a2014' };
-  if (v < 250) return { lbl: 'Goed',       kleur: '#4ade80', bg: '#0a1f10' };
-  if (v < 350) return { lbl: 'Matig',      kleur: '#f5c842', bg: '#1a1500' };
-  if (v < 450) return { lbl: 'Hoog',       kleur: '#f07830', bg: '#1a0c00' };
-  return               { lbl: 'Slecht',    kleur: '#f05050', bg: '#1a0808' };
+function co2i(v) {
+  if (v<100) return {l:'Uitstekend',c:'#22c55e',bg:'#050e07'};
+  if (v<200) return {l:'Goed',c:'#86efac',bg:'#071208'};
+  if (v<300) return {l:'Gemiddeld',c:'#f5c842',bg:'#0a0900'};
+  if (v<400) return {l:'Hoog',c:'#f07830',bg:'#100800'};
+  return            {l:'Slecht',c:'#f05050',bg:'#0f0808'};
 }
 
-// ══════════════════════════════════════════════════════
-//  ANALYSE
-// ══════════════════════════════════════════════════════
-function analyseer(uren) {
-  const nu = new Date().getHours();
-  const co2 = uren.map(u => u.co2);
+// ── STATE ──────────────────────────────────────────
+let S = {
+  key:   localStorage.getItem('ned_key') || '',
+  prov:  localStorage.getItem('province') || '8',
+  grps:  JSON.parse(localStorage.getItem('panel_groups')||'null') || [{orient:'Z',kwp:6}],
+  data:  null,
+};
 
-  // Beste 3-uurs venster
-  let bStart = nu, bGem = 9999;
-  for (let i = nu; i <= 21; i++) {
-    const g = (co2[i]+co2[i+1]+co2[i+2])/3;
-    if (g < bGem) { bGem = g; bStart = i; }
-  }
-  if (bGem > 400) {
-    for (let i = 0; i <= 21; i++) {
-      const g = (co2[i]+co2[i+1]+co2[i+2])/3;
-      if (g < bGem) { bGem = g; bStart = i; }
-    }
-  }
+// ── PANEEL EDITOR ──────────────────────────────────
+function renderEditor() {
+  document.getElementById('pge').innerHTML = S.grps.map((g,i) => `
+    <div class="pg">
+      <label>Dakvlak ${i+1}</label>
+      <select class="si" id="go${i}" style="width:140px;">
+        ${ORI.map(o=>`<option value="${o.code}"${g.orient===o.code?' selected':''}>${o.label}</option>`).join('')}
+      </select>
+      <label style="width:auto;margin-left:4px;">kWp</label>
+      <input class="si" id="gk${i}" type="number" min="0.1" step="0.1" value="${g.kwp}" style="width:68px;">
+      ${S.grps.length>1?`<button class="del" onclick="delGroup(${i})">×</button>`:''}
+    </div>`).join('');
+}
+function addGroup()   { S.grps.push({orient:'ZW',kwp:2}); renderEditor(); }
+function delGroup(i)  { S.grps.splice(i,1); renderEditor(); }
 
-  // Zonnepiek
-  const solar = uren.map(u => u.solar);
-  const maxS  = Math.max(...solar, 1);
-  const piek  = solar.map((v,i) => v >= maxS*0.65 ? i : -1).filter(i=>i>=0);
-  const zon   = berekenZon(new Date());
-  const spStart = piek.length ? Math.min(...piek) : Math.round(zon.op)+1;
-  const spEnd   = piek.length ? Math.max(...piek)+1 : Math.round(zon.ond);
-
-  const minCO2 = Math.min(...co2);
-  const maxCO2 = Math.max(...co2);
-  const slecht = [...co2].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v).slice(0,3).map(x=>x.i).sort((a,b)=>a-b);
-  const gemGroen = Math.round(uren.reduce((s,u)=>s+u.pctGroen,0)/24);
-
-  return { bStart, bEind: bStart+3, bGem: Math.round(bGem),
-           bStr: `${bStart}:00–${bStart+3}:00`,
-           minCO2, maxCO2, slecht, gemGroen,
-           spStart, spEnd, maxSolar: maxS,
-           bespPct: Math.round((1 - bGem/maxCO2)*100),
-           huidigCO2: co2[nu] || co2[12] };
+// ── NAVIGATIE ──────────────────────────────────────
+function switchView(n,el) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+n).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('scroll').scrollTop=0;
+}
+function saveSettings() {
+  S.key  = document.getElementById('s-key').value.trim();
+  S.prov = document.getElementById('s-prov').value;
+  S.grps = S.grps.map((_,i)=>({orient:document.getElementById('go'+i).value,kwp:parseFloat(document.getElementById('gk'+i).value)||1}));
+  localStorage.setItem('ned_key',S.key);
+  localStorage.setItem('province',S.prov);
+  localStorage.setItem('panel_groups',JSON.stringify(S.grps));
+  switchView('dashboard',document.querySelector('.ni'));
+  refresh();
 }
 
-// ══════════════════════════════════════════════════════
-//  RENDER DASHBOARD
-// ══════════════════════════════════════════════════════
-function renderDashboard(data) {
-  const { uren, zon, bewolking } = data;
-  const a  = analyseer(uren);
-  const nu = new Date().getHours();
-  const cl = co2Label(a.huidigCO2);
-  const maxCO2   = a.maxCO2 + 30;
-  const maxSolar = Math.max(...uren.map(u => u.solar), 1);
+// ── ZON ────────────────────────────────────────────
+function zon(d) {
+  const dag=Math.floor((d-new Date(d.getFullYear(),0,0))/864e5);
+  const B=(360/365)*(dag-81)*Math.PI/180;
+  const eqT=9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);
+  const lat=52.3676*Math.PI/180, lon=4.9041;
+  const decl=23.45*Math.sin(B)*Math.PI/180;
+  const ha=Math.acos(Math.max(-1,Math.min(1,-Math.tan(lat)*Math.tan(decl))))*180/Math.PI;
+  const mo=d.getMonth()+1, tz=(mo>=4&&mo<=10)?2:1;
+  const cor=(4*(15*tz-lon))/60-eqT/60;
+  const op=12-ha/15+cor, ond=12+ha/15+cor;
+  return {op,ond,opS:h2t(op),ondS:h2t(ond),midS:h2t((op+ond)/2),dag:ond-op};
+}
+function h2t(h){return`${Math.floor(h).toString().padStart(2,'0')}:${Math.round((h%1)*60).toString().padStart(2,'0')}`;}
 
-  // CO2 bars
-  const co2Bars = uren.map(u => {
-    const hPct = Math.round((u.co2 / maxCO2) * 100);
-    const sPct = Math.round((u.solar / maxSolar) * 80);
-    const isBest = u.h >= a.bStart && u.h < a.bEind;
-    const isNow  = u.h === nu;
-    const kleur  = isBest ? '#22c55e' : co2Kleur(u.co2);
-    const solOverlay = u.solar > 100
-      ? `<div class="bar-solar" style="height:${Math.min(sPct,hPct)}%;"></div>` : '';
-    return `<div class="bar-col ${isNow?'is-now':''} ${isBest?'is-best':''}"
-                 onmouseenter="showTip(event,'${u.h}:00 — ${u.co2} gCO₂/kWh${u.solar>100?' ☀ '+Math.round(u.solar/1000*10)/10+' GW':''}')"
-                 onmouseleave="hideTip()"
-                 ontouchstart="showTip(event,'${u.h}:00 — ${u.co2} gCO₂/kWh${u.solar>100?' ☀ '+Math.round(u.solar/1000*10)/10+' GW':''}')"
-                 ontouchend="hideTip()">
-      <div class="bar-inner" style="height:${hPct}%; background:${kleur};">${solOverlay}</div>
-      <div class="bar-hour">${u.h%4===0?u.h+'u':''}</div>
-    </div>`;
+// ── SOLAR OPBRENGST MODEL ──────────────────────────
+// Per uur, per groep: kWp * basisintensiteit * bewolkingsfactor * oriëntatiefactor * azimuth-correctie
+// Geijkt op NED.nl Noord-Holland data (MW als relatieve schaal)
+function solarYield(z, cc, nedSolar) {
+  const maxNed = Math.max(...nedSolar, 1);
+  return Array.from({length:24},(_,h)=>{
+    const frac=(h-z.op)/(z.ond-z.op);
+    if(frac<=0||frac>=1) return {total:0,gs:S.grps.map(()=>0)};
+    const base = Math.sin(frac*Math.PI);           // parabool: piek op zonsmidag
+    const cloud = (cc[h]||0)/100;
+    const cf = 0.12 + 0.88*(1-cloud*0.87);        // diffuus licht bij bewolking
+    // NED.nl kalibratiefactor (gewogen gemiddelde model + data)
+    const nedNorm = nedSolar[h]/maxNed;
+    const cal = base>0 ? (0.45*nedNorm+0.55*base)/base : 1;
+    const gs = S.grps.map(g=>{
+      const o=ORI.find(x=>x.code===g.orient)||ORI[0];
+      // Azimuth-gewicht: Oost produceert meer ochtend, West meer middag
+      const azRad=o.az*Math.PI/180;
+      const sunAz=(frac*Math.PI); // 0=Oost, π=West vereenvoudigd
+      const azW=Math.max(0.25, 0.25+0.75*Math.cos(azRad-sunAz-Math.PI/2));
+      return Math.max(0,Math.round(g.kwp*base*cf*cal*o.f*azW*100)/100);
+    });
+    return {total:Math.round(gs.reduce((s,v)=>s+v,0)*100)/100, gs};
+  });
+}
+
+// ── NED.nl FETCH ──────────────────────────────────
+const NED='https://api.ned.nl/v1/utilizations';
+async function nedGet(point,type,cls){
+  const d=new Date();
+  const v=d.toISOString().slice(0,10);
+  const m=new Date(d.getTime()+864e5).toISOString().slice(0,10);
+  const p=new URLSearchParams({point,type,granularity:5,granularitytimezone:1,classification:cls,activity:1,'validfrom[after]':v,'validfrom[strictly_before]':m});
+  const r=await fetch(`${NED}?${p}`,{headers:{'X-AUTH-TOKEN':S.key,accept:'application/json'}});
+  if(!r.ok) throw new Error(`NED ${r.status}`);
+  const j=await r.json();
+  return Array.isArray(j)?j:(j['hydra:member']||[]);
+}
+function rh(rec){const dt=new Date(rec.validfrom);const mo=dt.getUTCMonth()+1;return(dt.getUTCHours()+((mo>=4&&mo<=10)?2:1))%24;}
+
+async function fetchData(){
+  if(!S.key) return {err:'no-key'};
+  try{
+    const [mix,solar]=await Promise.all([nedGet(0,27,1),nedGet(parseInt(S.prov),2,1)]);
+    const u=Array.from({length:24},(_,h)=>({h,co2:0,sNed:0}));
+    mix.forEach(r=>{const h=rh(r);if(h<24)u[h].co2=r.emissionfactor?Math.round(r.emissionfactor*1000):0;});
+    solar.forEach(r=>{const h=rh(r);if(h<24)u[h].sNed=r.capacity||0;});
+    if(u.filter(x=>x.co2>0).length<6)fallback(u);
+    const z=zon(new Date());
+    let cc=Array(24).fill(40);
+    try{const om=await fetch('https://api.open-meteo.com/v1/forecast?latitude=52.3676&longitude=4.9041&hourly=cloudcover&timezone=Europe%2FAmsterdam&forecast_days=1');if(om.ok){const d=await om.json();cc=d.hourly?.cloudcover||cc;}}catch(e){}
+    const sy=solarYield(z,cc,u.map(x=>x.sNed));
+    return {u,z,cc,sy,err:null};
+  }catch(e){console.error(e);return{err:e.message};}
+}
+function fallback(u){const b=[385,375,368,362,360,355,342,322,282,244,205,195,192,190,198,212,232,262,305,338,362,375,383,388];u.forEach((x,h)=>{if(!x.co2)x.co2=b[h];});}
+
+// ── ANALYSE ────────────────────────────────────────
+function analyse(u,sy){
+  const nu=new Date().getHours();
+  const co2=u.map(x=>x.co2);
+  let bS=nu,bG=9999;
+  for(let i=nu;i<=21;i++){const g=(co2[i]+co2[i+1]+co2[i+2])/3;if(g<bG){bG=g;bS=i;}}
+  if(bG>400){for(let i=0;i<=21;i++){const g=(co2[i]+co2[i+1]+co2[i+2])/3;if(g<bG){bG=g;bS=i;}}}
+  const tots=sy.map(s=>s.total);
+  const maxY=Math.max(...tots,0.01);
+  const piekU=tots.indexOf(maxY);
+  const dagTot=Math.round(tots.reduce((s,v)=>s+v,0)*10)/10;
+  const spU=tots.map((v,i)=>v>=maxY*0.65?i:-1).filter(i=>i>=0);
+  const spS=spU.length?Math.min(...spU):10, spE=spU.length?Math.max(...spU)+1:15;
+  const maxCO2=Math.max(...co2), minCO2=Math.min(...co2);
+  const sl=[...co2].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v).slice(0,3).map(x=>x.i).sort((a,b)=>a-b);
+  const totKwp=S.grps.reduce((s,g)=>s+g.kwp,0);
+  return{bS,bE:bS+3,bG:Math.round(bG),bStr:`${bS}:00–${bS+3}:00`,
+         maxCO2,minCO2,sl,hCO2:co2[nu]||co2[12],
+         maxY,piekU,dagTot,spS,spE,totKwp,
+         besp:Math.round((1-bG/maxCO2)*100)};
+}
+
+// ── TOOLTIP ────────────────────────────────────────
+function tt(e,txt){const t=document.getElementById('tip');t.textContent=txt;t.style.display='block';t.style.left=Math.min(e.clientX+8,window.innerWidth-200)+'px';t.style.top=(e.clientY-44)+'px';}
+function ht(){document.getElementById('tip').style.display='none';}
+
+// ── RENDER DASHBOARD ───────────────────────────────
+function renderDash(d){
+  const {u,z,sy}=d;
+  const a=analyse(u,sy);
+  const nu=new Date().getHours();
+  const ci=co2i(a.hCO2);
+  const maxC=a.maxCO2+20, maxY=Math.max(...sy.map(s=>s.total),0.01);
+
+  const co2bars=u.map(x=>{
+    const hp=Math.round((x.co2/maxC)*100);
+    const iB=x.h>=a.bS&&x.h<a.bE, iN=x.h===nu;
+    const kl=iB?'#22c55e':co2k(x.co2);
+    return`<div class="b${iN?' now':''}${iB?' best':''}" onmouseenter="tt(event,'${x.h}:00 — ${x.co2} gCO₂/kWh')" onmouseleave="ht()" ontouchstart="tt(event,'${x.h}:00 — ${x.co2} gCO₂/kWh')" ontouchend="ht()"><div class="bi" style="height:${hp}%;background:${kl};opacity:0.85;"></div><div class="bh">${x.h%4===0?x.h+'u':''}</div></div>`;
   }).join('');
 
-  // Mix bars (hernieuwbaar %)
-  const mixBars = uren.map(u => {
-    const r = Math.round(34 + (1-u.pctGroen/100)*180);
-    const g = Math.round(200*(u.pctGroen/100));
-    return `<div class="mix-col" style="height:${Math.max(u.pctGroen,2)}%; background:rgb(${r},${g},50); opacity:0.8;"></div>`;
+  const sbars=sy.map((s,h)=>{
+    const pp=Math.round((s.total/maxY)*100);
+    const iN=h===nu, iP=h>=a.spS&&h<a.spE;
+    return`<div class="sb${iN?' now':''}" onmouseenter="tt(event,'${h}:00 — ${s.total} kWh')" onmouseleave="ht()" ontouchstart="tt(event,'${h}:00 — ${s.total} kWh')" ontouchend="ht()"><div class="sbi" style="height:${pp}%;background:${iP?'#f5c842':'#b07808'};opacity:${pp>0?0.88:0};"></div><div class="sbh">${h%4===0?h+'u':''}</div></div>`;
   }).join('');
 
-  // Solar bars
-  const solarBars = uren.map(u => {
-    const pct = Math.round((u.solar / maxSolar) * 100);
-    const y   = Math.round(180*(u.solar/maxSolar));
-    return `<div class="solar-bar-col" style="height:${pct}%; background:rgb(${y+75},${Math.round(y*0.7)},0);"></div>`;
+  const grpsH=S.grps.map((g,gi)=>{
+    const gY=Math.round(sy.reduce((s,yr)=>s+(yr.gs[gi]||0),0)*10)/10;
+    const o=ORI.find(x=>x.code===g.orient)||ORI[0];
+    const pct=a.dagTot>0?Math.round(gY/a.dagTot*100):0;
+    const barW=Math.max(pct*0.8,3);
+    return`<div class="sg-row"><div class="sg-bar" style="width:${barW}px;background:#f5c842;opacity:0.75;"></div><span class="sg-lbl">${o.label}</span><span class="sg-kwp">${g.kwp} kWp</span><span class="sg-yield">≈ ${gY} kWh</span><span class="sg-pct">(${pct}%)</span></div>`;
   }).join('');
 
-  const zonnigheid = maxSolar > 8000 ? '☀ Zonnig' : maxSolar > 3000 ? '⛅ Wisselend' : '☁ Bewolkt';
-
-  document.getElementById('dashboard-content').innerHTML = `
-    <!-- NOW STRIP -->
+  document.getElementById('dash').innerHTML=`
     <div class="now-strip">
       <div class="now-item">
         <div class="now-label">Nu · ${nu}:00</div>
-        <div class="now-val" style="color:${cl.kleur};">${a.huidigCO2}</div>
+        <div class="now-val" style="color:${ci.c};">${a.hCO2}</div>
         <div class="now-unit">gCO₂/kWh</div>
-        <div class="now-badge" style="background:${cl.bg}; color:${cl.kleur};">${cl.lbl}</div>
+        <div class="now-badge" style="background:${ci.bg};color:${ci.c};">${ci.l}</div>
       </div>
       <div class="now-item">
         <div class="now-label">Beste venster</div>
-        <div class="now-val" style="color:#3ddc6e; font-size:22px;">${a.bStart}:00</div>
-        <div class="now-unit">tot ${a.bEind}:00</div>
-        <div class="now-badge" style="background:#0a2014; color:#3ddc6e;">${a.bGem} g/kWh</div>
+        <div class="now-val" style="color:#22c55e;font-size:20px;">${a.bS}:00</div>
+        <div class="now-unit">tot ${a.bE}:00</div>
+        <div class="now-badge" style="background:#050e07;color:#22c55e;">${a.bG} g/kWh</div>
       </div>
       <div class="now-item">
-        <div class="now-label">Net vandaag</div>
-        <div class="now-val" style="color:#818cf8; font-size:22px;">${a.gemGroen}%</div>
-        <div class="now-unit">hernieuwbaar</div>
-        <div class="now-badge" style="background:#0a0a1f; color:#818cf8;">${zonnigheid}</div>
+        <div class="now-label">Opbrengst zon</div>
+        <div class="now-val" style="color:#f5c842;font-size:20px;">${a.dagTot}</div>
+        <div class="now-unit">kWh vandaag</div>
+        <div class="now-badge" style="background:#0a0900;color:#c8a020;">${a.totKwp} kWp</div>
       </div>
     </div>
 
-    <!-- BEST BANNER -->
     <div class="best-banner">
       <div class="best-icon">⚡</div>
       <div class="best-text">
         <div class="best-title">Optimaal stroomvenster vandaag</div>
-        <div class="best-time">${a.bStart}:00 – ${a.bEind}:00</div>
-        <div class="best-sub">${a.bGem} gCO₂/kWh · ${a.bespPct}% minder uitstoot dan het vuilste moment</div>
+        <div class="best-time">${a.bS}:00 – ${a.bE}:00</div>
+        <div class="best-sub">${a.bG} gCO₂/kWh · ${a.besp}% minder uitstoot dan het vuilste moment</div>
       </div>
-      <div class="best-saving">−${a.bespPct}%</div>
+      <div class="best-pill">−${a.besp}%</div>
     </div>
 
-    <!-- CO2 CHART -->
-    <div class="section-head">CO₂-intensiteit per uur</div>
+    <div class="sh">CO₂-intensiteit per uur</div>
     <div class="chart-card">
-      <div class="chart-bars">${co2Bars}</div>
-      <div class="chart-legend">
-        <div class="legend-item"><div class="legend-dot" style="background:#22c55e;"></div>&lt;150 uitstekend</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#4ade80;"></div>&lt;250 goed</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#f5c842;"></div>&lt;350 matig</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#f05050;"></div>&gt;350 slecht</div>
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(245,200,66,0.4); border:1px solid #f5c842;"></div>Jouw zon</div>
+      <div class="co2-bars">${co2bars}</div>
+      <div class="co2-legend">
+        <div class="leg"><div class="ld" style="background:#22c55e;"></div>&lt;100 uitstekend</div>
+        <div class="leg"><div class="ld" style="background:#86efac;"></div>&lt;200 goed</div>
+        <div class="leg"><div class="ld" style="background:#f5c842;"></div>&lt;300 gemiddeld</div>
+        <div class="leg"><div class="ld" style="background:#f07830;"></div>&lt;400 hoog</div>
+        <div class="leg"><div class="ld" style="background:#f05050;"></div>≥400 slecht</div>
       </div>
     </div>
-
-    <!-- HERNIEUWBAAR -->
-    <div class="section-head">Aandeel hernieuwbaar op net</div>
-    <div class="mix-card">
-      <div class="mix-bars">${mixBars}</div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:5px;">
-        <span>0%</span><span>50%</span><span>100% groen</span>
-      </div>
+    <div class="thr-note">
+      Grenzen gebaseerd op de <strong>EU-taxonomie</strong> (&lt;100 g/kWh = "groen") en het <strong>Nederlandse jaargemiddelde</strong> van ±270 gCO₂/kWh (Ember/EEA 2023–2024).
     </div>
 
-    <!-- SOLAR -->
-    <div class="section-head">Zonnepanelen Amsterdam</div>
+    <div class="sh">Verwachte opbrengst zonnepanelen</div>
     <div class="solar-card">
-      <div class="solar-header">
-        <div class="solar-title">☀ Noord-Holland prognose</div>
-        <div class="solar-badge">${zonnigheid}</div>
+      <div class="solar-hdr">
+        <div>
+          <div class="solar-ttl">☀ kWh-opbrengst per uur</div>
+          <div class="solar-sub">Op basis van oriëntatie, kWp en bewolkingsprognose</div>
+        </div>
+        <div class="solar-tot">≈ ${a.dagTot} kWh vandaag</div>
       </div>
-      <div class="solar-bars">${solarBars}</div>
+      <div class="solar-bars">${sbars}</div>
       <div class="solar-times">
-        <span>00:00</span>
-        <span>↑ ${zon.opStr}</span>
-        <span>⊙ ${zon.midStr}</span>
-        <span>↓ ${zon.ondStr}</span>
-        <span>23:00</span>
+        <span>00:00</span><span>↑ ${z.opS}</span><span>⊙ ${z.midS}</span><span>↓ ${z.ondS}</span><span>23:00</span>
       </div>
+      <div class="solar-groups">${grpsH}</div>
       <div class="solar-stats">
-        <div class="solar-stat">
-          <span class="solar-stat-val">${zon.opStr}</span>
-          <span class="solar-stat-lbl">Zonsopgang</span>
-        </div>
-        <div class="solar-stat">
-          <span class="solar-stat-val">${Math.round(zon.daguren*10)/10}u</span>
-          <span class="solar-stat-lbl">Daglicht</span>
-        </div>
-        <div class="solar-stat">
-          <span class="solar-stat-val">${zon.ondStr}</span>
-          <span class="solar-stat-lbl">Zonsondergang</span>
-        </div>
+        <div class="ss"><span class="ss-val">${z.opS}</span><span class="ss-lbl">Zonsopgang</span></div>
+        <div class="ss"><span class="ss-val">${h2t(a.piekU)}</span><span class="ss-lbl">Piek zon</span></div>
+        <div class="ss"><span class="ss-val">${z.ondS}</span><span class="ss-lbl">Zonsondergang</span></div>
       </div>
     </div>
 
-    <!-- TIPS -->
-    <div class="section-head">Aanbevelingen</div>
-    <div class="tips-wrap">
-      <div class="tip green">
-        <div class="tip-icon">⚡</div>
-        <div>Beste moment voor vaatwasser, wasmachine of acculaden: <strong>${a.bStr}</strong> — ${a.bGem} gCO₂/kWh. Je bespaart <strong>${a.bespPct}%</strong> uitstoot t.o.v. het slechtste moment.</div>
-      </div>
-      <div class="tip yellow">
-        <div class="tip-icon">☀</div>
-        <div>Jouw panelen pieken tussen <strong>${a.spStart}:00 en ${a.spEnd}:00</strong>. Gebruik in dat venster zware apparaten voor <strong>100% eigen groene stroom</strong> — geen netverliezen.</div>
-      </div>
-      <div class="tip red">
-        <div class="tip-icon">⚠</div>
-        <div>Vermijd energiegebruik om <strong>${a.slecht.map(h=>h+':00').join(', ')}</strong> — dan is het net het vuilste (~${a.maxCO2} gCO₂/kWh, veel gas in de mix).</div>
-      </div>
-      <div class="tip blue">
-        <div class="tip-icon">🌬</div>
-        <div>Gemiddeld hernieuwbaar aandeel vandaag: <strong>${a.gemGroen}%</strong>. ${a.gemGroen>=50?'Een relatief groene dag — goed moment voor intensief gebruik.':'Het net leunt vandaag meer op gas. Extra reden om het beste venster te benutten.'}</div>
-      </div>
+    <div class="sh">Aanbevelingen</div>
+    <div class="tips">
+      <div class="tip g"><div class="ti">⚡</div><div>Beste moment voor vaatwasser, wasmachine of laadpaal: <strong>${a.bStr}</strong> — ${a.bG} gCO₂/kWh. Dat is <strong>${a.besp}% minder uitstoot</strong> dan het vuilste moment vandaag.</div></div>
+      <div class="tip y"><div class="ti">☀</div><div>Jouw panelen leveren het meest tussen <strong>${a.spS}:00 en ${a.spE}:00</strong> (piek ≈ ${maxY.toFixed(1)} kWh/uur). Gebruik zware apparaten dan voor <strong>100% eigen groene stroom</strong>.</div></div>
+      <div class="tip r"><div class="ti">⚠</div><div>Vermijd het net om <strong>${a.sl.map(h=>h+':00').join(', ')}</strong> — dan is het het vuilste (~${a.maxCO2} gCO₂/kWh, gas-piek).</div></div>
     </div>
-
     <div class="status-bar">Bron: NED.nl (TenneT/Gasunie) · Open-Meteo · ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</div>
   `;
 }
 
-// ══════════════════════════════════════════════════════
-//  RENDER PROGNOSE (morgen)
-// ══════════════════════════════════════════════════════
-function renderPrognose(data) {
-  const { uren } = data;
-  const a = analyseer(uren);
-  const morgen = new Date(); morgen.setDate(morgen.getDate()+1);
-  const dagNaam = morgen.toLocaleDateString('nl-NL',{weekday:'long', day:'numeric', month:'long'});
-
-  document.getElementById('prognose-content').innerHTML = `
-    <div style="padding:0 0 8px;">
-      <div class="section-head" style="margin:0 0 10px;">Prognose morgen · ${dagNaam}</div>
-      <div class="best-banner" style="margin:0 0 10px;">
-        <div class="best-icon">📅</div>
-        <div class="best-text">
-          <div class="best-title">Beste venster morgen</div>
-          <div class="best-time">${a.bStr}</div>
-          <div class="best-sub">${a.bGem} gCO₂/kWh verwacht</div>
-        </div>
-      </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:0.08em;text-transform:uppercase;">CO₂ per uur (prognose)</div>
-        ${uren.map(u => `
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">
-            <div style="width:32px;font-size:10px;color:var(--muted);">${u.h}u</div>
-            <div style="flex:1;height:14px;background:var(--bg2);border-radius:3px;overflow:hidden;">
-              <div style="height:100%;width:${Math.round(u.co2/500*100)}%;background:${co2Kleur(u.co2)};border-radius:3px;opacity:0.8;transition:width 0.3s;"></div>
-            </div>
-            <div style="width:60px;font-size:10px;color:${co2Kleur(u.co2)};text-align:right;">${u.co2} g</div>
-          </div>
-        `).join('')}
-      </div>
-      <div class="status-bar">Prognose op basis van NED.nl day-ahead data</div>
+// ── RENDER PROGNOSE ────────────────────────────────
+function renderProg(d){
+  const {u,sy}=d;
+  const a=analyse(u,sy);
+  const co2=u.map(x=>x.co2);
+  const maxC=Math.max(...co2,1), maxY=Math.max(...sy.map(s=>s.total),0.01);
+  document.getElementById('prog-content').innerHTML=`
+    <div class="sh" style="margin:0 0 12px;">Dag-overzicht per uur</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px;margin-bottom:14px;">
+      <div style="font-size:9px;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">CO₂-intensiteit gCO₂/kWh</div>
+      ${u.map(x=>`<div class="pr"><div class="pr-h">${x.h}u</div><div class="pr-t"><div class="pr-f" style="width:${Math.round(x.co2/maxC*100)}%;background:${co2k(x.co2)};opacity:0.8;"></div></div><div class="pr-v" style="color:${co2k(x.co2)};">${x.co2}g</div></div>`).join('')}
     </div>
+    <div style="background:#0d0d00;border:1px solid #2a2800;border-radius:var(--radius);padding:14px 12px;margin-bottom:14px;">
+      <div style="font-size:9px;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Opbrengst zonnepanelen (kWh/uur)</div>
+      ${sy.map((s,h)=>`<div class="pr"><div class="pr-h">${h}u</div><div class="pr-t"><div class="pr-f" style="width:${Math.round(s.total/maxY*100)}%;background:#f5c842;opacity:0.8;"></div></div><div class="pr-v" style="color:#c8a020;">${s.total>0?s.total+'':'—'}</div></div>`).join('')}
+    </div>
+    <div class="best-banner" style="margin:0 0 12px;">
+      <div class="best-icon">📊</div>
+      <div class="best-text">
+        <div class="best-title">Dag-totaal panelen</div>
+        <div class="best-time">≈ ${a.dagTot} kWh</div>
+        <div class="best-sub">Beste CO₂-venster: ${a.bStr} · ${a.bG} g/kWh</div>
+      </div>
+    </div>
+    <div class="status-bar">NED.nl day-ahead · eigen opbrengstmodel o.b.v. oriëntatie & bewolking</div>
   `;
 }
 
-// ══════════════════════════════════════════════════════
-//  TOOLTIP
-// ══════════════════════════════════════════════════════
-function showTip(e, txt) {
-  const t = document.getElementById('tooltip');
-  t.textContent = txt;
-  t.style.display = 'block';
-  t.style.left = Math.min(e.clientX + 8, window.innerWidth - 180) + 'px';
-  t.style.top  = (e.clientY - 48) + 'px';
-}
-function hideTip() {
-  document.getElementById('tooltip').style.display = 'none';
-}
-
-// ══════════════════════════════════════════════════════
-//  HOOFD REFRESH
-// ══════════════════════════════════════════════════════
-async function refreshData() {
-  const btn = document.getElementById('refresh-btn');
+// ── HOOFD REFRESH ──────────────────────────────────
+async function refresh(){
+  const btn=document.getElementById('rbtn');
   btn.classList.add('spinning');
-  document.getElementById('loading-state').style.display = 'flex';
-  document.getElementById('dashboard-content').style.display = 'none';
-
-  const data = await fetchAllData();
+  document.getElementById('loading').style.display='flex';
+  document.getElementById('lmsg').textContent='Data ophalen van NED.nl...';
+  document.getElementById('dash').style.display='none';
+  const d=await fetchData();
   btn.classList.remove('spinning');
-
-  if (data.error === 'no-key') {
-    document.getElementById('loading-state').innerHTML =
-      '<div style="padding:20px; text-align:center; color:var(--muted); font-size:12px; line-height:1.7;">' +
-      '🔑 Vul eerst je NED.nl API-sleutel in<br>' +
-      '<span style="font-size:10px;">Ga naar ◎ Instellingen om te beginnen</span></div>';
-    return;
-  }
-  if (data.error) {
-    document.getElementById('loading-state').innerHTML =
-      `<div style="padding:20px; text-align:center; color:#f05050; font-size:11px;">⚠ Fout bij laden:<br>${data.error}<br><br>` +
-      `<span style="color:var(--muted);">Controleer je API-sleutel in Instellingen</span></div>`;
-    return;
-  }
-
-  STATE.data = data;
-  STATE.lastFetch = new Date();
-
-  document.getElementById('last-update').textContent =
-    `Amsterdam · ${STATE.lastFetch.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
-
-  document.getElementById('loading-state').style.display = 'none';
-  document.getElementById('dashboard-content').style.display = 'block';
-
-  renderDashboard(data);
-  renderPrognose(data);
+  if(d.err==='no-key'){document.getElementById('lmsg').textContent='🔑 Vul je NED.nl API-sleutel in via ◎ Instellingen';return;}
+  if(d.err){document.getElementById('lmsg').textContent=`⚠ Fout: ${d.err}\nControleer je sleutel in Instellingen`;return;}
+  S.data=d;
+  document.getElementById('last-update').textContent=`Amsterdam · ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+  document.getElementById('loading').style.display='none';
+  document.getElementById('dash').style.display='block';
+  renderDash(d);
+  renderProg(d);
 }
 
-// ══════════════════════════════════════════════════════
-//  PWA INSTALL PROMPT (Android Chrome)
-// ══════════════════════════════════════════════════════
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  document.getElementById('install-banner').classList.add('show');
-});
-document.getElementById('install-btn').addEventListener('click', async () => {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    document.getElementById('install-banner').classList.remove('show');
-  }
-});
+// ── INIT ───────────────────────────────────────────
+document.getElementById('s-key').value=S.key;
+document.getElementById('s-prov').value=S.prov;
+renderEditor();
 
-// ══════════════════════════════════════════════════════
-//  SERVICE WORKER REGISTRATIE
-// ══════════════════════════════════════════════════════
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
+let dp;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;document.getElementById('ibanner').classList.add('show');});
+document.getElementById('ibtn').addEventListener('click',async()=>{if(dp){dp.prompt();dp=null;}document.getElementById('ibanner').classList.remove('show');});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 
-// ══════════════════════════════════════════════════════
-//  START
-// ══════════════════════════════════════════════════════
-refreshData();
-
-// Auto-refresh elke 30 minuten
-setInterval(refreshData, 30 * 60 * 1000);
+refresh();
+setInterval(refresh,30*60*1000);
 </script>
 </body>
 </html>
