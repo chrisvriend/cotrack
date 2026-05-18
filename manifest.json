@@ -1,7 +1,7 @@
 {
   "name": "Groene Stroom Amsterdam",
   "short_name": "Groene Stroom",
-  "description": "Live CO₂-intensiteit en zonnepanelen dashboard voor Amsterdam via NED.nl",
+  "description": "Live CO₂-intensiteit, zonnepanelen en KNMI-weer voor Amsterdam",
   "start_url": "/cotrack/index.html",
   "scope": "/cotrack/",
   "display": "standalone",
@@ -9,43 +9,14 @@
   "theme_color": "#0a1a0f",
   "orientation": "portrait-primary",
   "lang": "nl",
-  "categories": ["utilities", "lifestyle"],
   "icons": [
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icons/icon-152.png",
-      "sizes": "152x152",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/icon-167.png",
-      "sizes": "167x167",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/icon-180.png",
-      "sizes": "180x180",
-      "type": "image/png"
-    }
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-152.png", "sizes": "152x152", "type": "image/png" },
+    { "src": "icons/icon-167.png", "sizes": "167x167", "type": "image/png" },
+    { "src": "icons/icon-180.png", "sizes": "180x180", "type": "image/png" }
   ],
   "shortcuts": [
-    {
-      "name": "Dashboard",
-      "short_name": "Nu",
-      "description": "Bekijk de huidige CO₂-intensiteit",
-      "url": "/cotrack/index.html",
-      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
-    }
+    { "name": "Dashboard", "short_name": "Nu", "url": "/cotrack/index.html", "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }] }
   ]
 }

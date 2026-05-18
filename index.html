@@ -24,13 +24,6 @@
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bot: env(safe-area-inset-bottom, 0px);
     }
-    /* CO2 drempelwaarden — gebaseerd op EU-taxonomie & NL-gemiddelde:
-       <100  groen   (EU taxonomy grens)
-       <200  lichtgroen (beter dan NL-jaargemiddelde ~270g)
-       <300  geel    (rond NL-gemiddelde)
-       <400  oranje  (boven gemiddeld, gas-zwaar)
-       ≥400  rood    (hoge fossiele piekbelasting) */
-
     * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     html,body { height:100%; background:var(--bg); color:var(--text); font-family:'DM Mono',monospace; overscroll-behavior:none; }
     body { display:flex; flex-direction:column; min-height:100dvh; padding-top:var(--safe-top); padding-bottom:var(--safe-bot); }
@@ -44,8 +37,28 @@
 
     .scroll { flex:1; overflow-y:auto; padding-bottom:80px; }
 
+    /* ── WEER KAART ── */
+    .weer-card { margin:14px 16px 0; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+    .weer-top  { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .weer-now  { display:flex; align-items:center; gap:12px; }
+    .weer-icon { font-size:34px; line-height:1; }
+    .weer-temp { font-family:'Instrument Serif',serif; font-size:34px; color:var(--text); line-height:1; }
+    .weer-desc { font-size:11px; color:var(--muted); margin-top:3px; }
+    .weer-meta { text-align:right; }
+    .wm-row    { font-size:10px; color:var(--muted); margin-bottom:3px; }
+    .wm-row span { color:var(--text); }
+    .wu-wrap   { display:flex; gap:3px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+    .wu-wrap::-webkit-scrollbar { display:none; }
+    .wu        { flex:0 0 50px; text-align:center; background:var(--bg2); border-radius:8px; padding:7px 4px 6px; }
+    .wu.nu     { background:#0f2a18; border:1px solid #1a5530; }
+    .wu-t      { font-size:9px; color:var(--muted); margin-bottom:3px; }
+    .wu-i      { font-size:15px; margin-bottom:2px; }
+    .wu-c      { font-size:11px; color:var(--text); }
+    .wu-r      { font-size:9px; color:#60a0f0; margin-top:2px; min-height:12px; }
+    .wu-w      { font-size:9px; color:var(--muted); margin-top:1px; }
+
     /* NOW STRIP */
-    .now-strip { margin:16px 16px 0; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+    .now-strip { margin:10px 16px 0; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
     .now-item  { text-align:center; }
     .now-label { font-size:9px; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
     .now-val   { font-family:'Instrument Serif',serif; font-size:28px; line-height:1; }
@@ -68,12 +81,13 @@
     /* CO2 CHART */
     .chart-card { margin:0 16px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 12px 12px; }
     .co2-bars { display:flex; align-items:flex-end; height:110px; gap:2px; margin-bottom:6px; }
-    .b { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; position:relative; cursor:pointer; }
-    .bi { width:100%; border-radius:3px 3px 0 0; min-height:3px; }
-    .b.now .bi { box-shadow:0 0 10px rgba(34,197,94,0.4); }
+    .b  { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; position:relative; cursor:pointer; }
+    .bi { width:100%; border-radius:3px 3px 0 0; min-height:3px; position:relative; }
+    .b.now  .bi { box-shadow:0 0 10px rgba(34,197,94,0.4); }
     .b.best .bi { outline:1px solid #22c55e; outline-offset:1px; }
+    .b.past .bi { opacity:0.45; }
     .bh { font-size:7px; color:var(--muted); margin-top:3px; }
-    .b.now .bh { color:#22c55e; }
+    .b.now .bh  { color:#22c55e; }
     .co2-legend { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
     .leg { display:flex; align-items:center; gap:5px; font-size:9px; color:var(--muted); }
     .ld  { width:8px; height:8px; border-radius:2px; }
@@ -90,9 +104,10 @@
     .solar-sub  { font-size:10px; color:var(--muted); margin-bottom:14px; }
     .solar-bars { display:flex; align-items:flex-end; height:90px; gap:2px; margin-bottom:6px; }
     .sb  { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; cursor:pointer; }
-    .sbi { width:100%; border-radius:3px 3px 0 0; min-height:0; }
+    .sbi { width:100%; border-radius:3px 3px 0 0; }
     .sbh { font-size:7px; color:var(--muted); margin-top:3px; }
-    .sb.now .sbh { color:var(--solar); }
+    .sb.now  .sbh { color:var(--solar); }
+    .sb.past .sbi { opacity:0.4; }
     .solar-times { display:flex; justify-content:space-between; font-size:9px; color:var(--muted); margin-top:2px; padding-bottom:12px; border-bottom:1px solid #1a1800; margin-bottom:12px; }
     .solar-groups { display:flex; flex-direction:column; gap:7px; margin-bottom:12px; }
     .sg-row { display:flex; align-items:center; gap:8px; font-size:10px; flex-wrap:wrap; }
@@ -128,12 +143,18 @@
     .view { display:none; }
     .view.active { display:block; }
 
-    /* PROGNOSE */
-    .pr { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+    /* PROGNOSE TABS */
+    .prog-tabs { display:flex; gap:8px; padding:14px 16px 0; }
+    .ptab { flex:1; padding:9px 0; text-align:center; font-size:11px; border:1px solid var(--border); border-radius:8px; cursor:pointer; color:var(--muted); background:var(--card); }
+    .ptab.active { border-color:#22c55e; color:#22c55e; background:#050e07; }
+
+    /* PROGNOSE BARS */
+    .pr   { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
     .pr-h { width:30px; font-size:10px; color:var(--muted); text-align:right; flex-shrink:0; }
-    .pr-t { flex:1; height:16px; background:var(--bg2); border-radius:4px; overflow:hidden; }
+    .pr-t { flex:1; height:16px; background:var(--bg2); border-radius:4px; overflow:hidden; position:relative; }
     .pr-f { height:100%; border-radius:4px; }
-    .pr-v { width:58px; font-size:10px; text-align:right; flex-shrink:0; }
+    .pr-m { position:absolute; right:0; top:0; bottom:0; width:3px; background:rgba(34,197,94,0.55); }
+    .pr-v { width:62px; font-size:10px; text-align:right; flex-shrink:0; }
 
     /* INSTELLINGEN */
     .sw { padding:16px; }
@@ -170,43 +191,49 @@
     <div class="app-name">Groene Stroom</div>
     <div class="app-sub" id="last-update">Amsterdam · laden...</div>
   </div>
-  <button class="refresh-btn" id="rbtn" onclick="refresh()">↻</button>
+  <button class="refresh-btn" id="rbtn" onclick="refresh()">&#8635;</button>
 </div>
 
 <div class="install-banner" id="ibanner">
-  <span>📲</span>
+  <span>&#128242;</span>
   <div class="install-txt">Installeer als app op je startscherm</div>
   <button class="install-btn" id="ibtn">Installeer</button>
-  <span style="color:var(--muted);font-size:18px;cursor:pointer;" onclick="this.parentElement.classList.remove('show')">×</span>
+  <span style="color:var(--muted);font-size:18px;cursor:pointer;" onclick="this.parentElement.classList.remove('show')">&#215;</span>
 </div>
 
 <div class="tooltip" id="tip"></div>
 
 <div class="scroll" id="scroll">
 
+  <!-- DASHBOARD -->
   <div class="view active" id="view-dashboard">
     <div class="loading" id="loading">
       <div class="spinner"></div>
-      <div id="lmsg">Data ophalen van NED.nl...</div>
+      <div id="lmsg">Data ophalen van NED.nl &amp; KNMI...</div>
     </div>
     <div id="dash" style="display:none;"></div>
   </div>
 
+  <!-- PROGNOSE: twee tabs vandaag / morgen -->
   <div class="view" id="view-prognose">
-    <div id="prog-content" style="padding:16px;color:var(--muted);font-size:12px;">Laden...</div>
+    <div class="prog-tabs">
+      <div class="ptab active" id="tab-v" onclick="switchProgTab('v')">Vandaag</div>
+      <div class="ptab" id="tab-m" onclick="switchProgTab('m')">Morgen</div>
+    </div>
+    <div id="prog-v" style="padding:12px 16px;"></div>
+    <div id="prog-m" style="padding:12px 16px; display:none;"></div>
   </div>
 
+  <!-- INSTELLINGEN -->
   <div class="view" id="view-settings">
     <div class="sw">
-
       <div class="sc">
         <div class="st">NED.nl API</div>
         <div class="sr" style="flex-direction:column;align-items:flex-start;gap:8px;">
-          <div><label>API Sleutel</label><div class="sh2">ned.nl → Mijn account → API</div></div>
+          <div><label>API Sleutel</label><div class="sh2">ned.nl &#8594; Mijn account &#8594; API</div></div>
           <input class="si" id="s-key" type="password" style="width:100%;max-width:280px;" placeholder="Jouw NED.nl sleutel" autocomplete="off">
         </div>
       </div>
-
       <div class="sc">
         <div class="st">Provincie</div>
         <div class="sr">
@@ -227,9 +254,8 @@
           </select>
         </div>
       </div>
-
       <div class="sc">
-        <div class="st">Zonnepanelen — oriëntatie & vermogen</div>
+        <div class="st">Zonnepanelen &#8212; ori&#235;ntatie &amp; vermogen</div>
         <div class="sh2" style="padding:10px 16px;border-bottom:1px solid var(--border);line-height:1.5;">
           Voeg per dakvlak een groep toe. Wordt gebruikt voor de kWh-opbrengst berekening.
         </div>
@@ -238,20 +264,24 @@
           <button class="add" onclick="addGroup()">+ Dakvlak toevoegen</button>
         </div>
       </div>
-
-      <button class="save" onclick="saveSettings()">✓ &nbsp;Opslaan & vernieuwen</button>
-
+      <button class="save" onclick="saveSettings()">&#10003; &nbsp;Opslaan &amp; vernieuwen</button>
       <div style="margin-top:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-size:11px;color:var(--muted);line-height:1.8;">
-        <strong style="color:var(--text);">CO₂-drempelwaarden (NL-context)</strong><br>
-        🟢 &lt;100 g/kWh — EU-taxonomie: "groene" stroom<br>
-        🟩 &lt;200 g/kWh — Beter dan NL-jaargemiddelde (±270 g)<br>
-        🟡 &lt;300 g/kWh — Rond het NL-gemiddelde<br>
-        🟠 &lt;400 g/kWh — Boven gemiddeld, gas-zwaar<br>
-        🔴 ≥400 g/kWh — Hoge fossiele piekbelasting<br>
+        <strong style="color:var(--text);">CO&#8322;-drempelwaarden (NL-context)</strong><br>
+        &#127822; &lt;100 g/kWh &#8212; EU-taxonomie: &#8220;groene&#8221; stroom<br>
+        &#129001; &lt;200 g/kWh &#8212; Beter dan NL-jaargemiddelde (&#177;270 g)<br>
+        &#127833; &lt;300 g/kWh &#8212; Rond het NL-gemiddelde<br>
+        &#127825; &lt;400 g/kWh &#8212; Boven gemiddeld, gas-zwaar<br>
+        &#128308; &#8805;400 g/kWh &#8212; Hoge fossiele piekbelasting<br>
+        <br>
+        <strong style="color:#22c55e;">&#9646;</strong> Groene streep onderaan balk = gemeten NED.nl waarde (actueel)<br>
+        Verblekte balk = verstreken uur<br>
+        <br>
+        <strong style="color:var(--text);">Weerbron</strong><br>
+        KNMI HARMONIE AROME (2 km NL-resolutie) via Open-Meteo<br>
         <br>
         <strong style="color:var(--text);">App installeren</strong><br>
-        <span style="color:#90b0f0;">Android (Chrome):</span> ⋮ → Toevoegen aan startscherm<br>
-        <span style="color:#90b0f0;">iPad / iPhone (Safari):</span> □↑ Delen → Zet op beginscherm
+        <span style="color:#90b0f0;">Android (Chrome):</span> &#8942; &#8594; Toevoegen aan startscherm<br>
+        <span style="color:#90b0f0;">iPad/iPhone (Safari):</span> &#9633;&#8593; Delen &#8594; Zet op beginscherm
       </div>
     </div>
   </div>
@@ -259,9 +289,9 @@
 </div>
 
 <div class="bottom-nav">
-  <div class="ni active" onclick="switchView('dashboard',this)"><div class="nico">◉</div><div class="nlbl">Nu</div></div>
-  <div class="ni" onclick="switchView('prognose',this)"><div class="nico">◈</div><div class="nlbl">Prognose</div></div>
-  <div class="ni" onclick="switchView('settings',this)"><div class="nico">◎</div><div class="nlbl">Instellingen</div></div>
+  <div class="ni active" onclick="switchView('dashboard',this)"><div class="nico">&#9673;</div><div class="nlbl">Nu</div></div>
+  <div class="ni" onclick="switchView('prognose',this)"><div class="nico">&#9672;</div><div class="nlbl">Prognose</div></div>
+  <div class="ni" onclick="switchView('settings',this)"><div class="nico">&#9678;</div><div class="nlbl">Instellingen</div></div>
 </div>
 
 <script>
@@ -275,7 +305,9 @@ const ORI = [
   { code:'N',  label:'Noord',     az:0,   f:0.32 },
 ];
 
-// ── CO2 KLEUR (EU-taxonomie + NL-gemiddelde als referentie) ──
+// ── CO2 KLEUR — EU-taxonomie + NL-gemiddelde als referentie ──
+// <100 groen (EU taxonomy), <200 lichtgroen (beter dan NL ~270g),
+// <300 geel (rond NL-gemiddelde), <400 oranje, >=400 rood
 function co2k(v) {
   if (v<100) return '#22c55e';
   if (v<200) return '#86efac';
@@ -285,18 +317,46 @@ function co2k(v) {
 }
 function co2i(v) {
   if (v<100) return {l:'Uitstekend',c:'#22c55e',bg:'#050e07'};
-  if (v<200) return {l:'Goed',c:'#86efac',bg:'#071208'};
-  if (v<300) return {l:'Gemiddeld',c:'#f5c842',bg:'#0a0900'};
-  if (v<400) return {l:'Hoog',c:'#f07830',bg:'#100800'};
-  return            {l:'Slecht',c:'#f05050',bg:'#0f0808'};
+  if (v<200) return {l:'Goed',      c:'#86efac',bg:'#071208'};
+  if (v<300) return {l:'Gemiddeld', c:'#f5c842',bg:'#0a0900'};
+  if (v<400) return {l:'Hoog',      c:'#f07830',bg:'#100800'};
+  return            {l:'Slecht',    c:'#f05050',bg:'#0f0808'};
+}
+
+// ── WEER helpers ──────────────────────────────────────
+function wIco(c, nacht) {
+  if (c===0)  return nacht ? '🌙' : '☀️';
+  if (c<=2)   return nacht ? '🌑' : '⛅';
+  if (c===3)  return '☁️';
+  if (c<=49)  return '🌫️';
+  if (c<=67)  return '🌧️';
+  if (c<=77)  return '❄️';
+  if (c<=82)  return '🌦️';
+  if (c<=86)  return '🌨️';
+  if (c<=99)  return '⛈️';
+  return '🌡️';
+}
+function wDesc(c) {
+  const m = {0:'Helder',1:'Overwegend helder',2:'Gedeeltelijk bewolkt',3:'Bewolkt',
+    45:'Mist',48:'IJsmist',51:'Lichte motregen',53:'Motregen',55:'Zware motregen',
+    61:'Lichte regen',63:'Regen',65:'Zware regen',71:'Lichte sneeuw',73:'Sneeuw',
+    75:'Zware sneeuw',80:'Lichte buien',81:'Buien',82:'Zware buien',95:'Onweer',96:'Onweer met hagel'};
+  return m[c] || 'Bewolkt';
+}
+function wDir(d) { return ['N','NO','O','ZO','Z','ZW','W','NW'][Math.round(d/45)%8]; }
+function bft(ms) {
+  const s=ms/3.6;
+  if(s<0.3)return 0; if(s<1.6)return 1; if(s<3.4)return 2; if(s<5.5)return 3;
+  if(s<8)  return 4; if(s<10.8)return 5; if(s<13.9)return 6; if(s<17.2)return 7;
+  return 8;
 }
 
 // ── STATE ──────────────────────────────────────────
 let S = {
-  key:   localStorage.getItem('ned_key') || '',
-  prov:  localStorage.getItem('province') || '8',
-  grps:  JSON.parse(localStorage.getItem('panel_groups')||'null') || [{orient:'Z',kwp:6}],
-  data:  null,
+  key:  localStorage.getItem('ned_key') || '',
+  prov: localStorage.getItem('province') || '8',
+  grps: JSON.parse(localStorage.getItem('panel_groups')||'null') || [{orient:'Z',kwp:6}],
+  data: null,
 };
 
 // ── PANEEL EDITOR ──────────────────────────────────
@@ -309,11 +369,11 @@ function renderEditor() {
       </select>
       <label style="width:auto;margin-left:4px;">kWp</label>
       <input class="si" id="gk${i}" type="number" min="0.1" step="0.1" value="${g.kwp}" style="width:68px;">
-      ${S.grps.length>1?`<button class="del" onclick="delGroup(${i})">×</button>`:''}
+      ${S.grps.length>1?`<button class="del" onclick="delGroup(${i})">&#215;</button>`:''}
     </div>`).join('');
 }
-function addGroup()   { S.grps.push({orient:'ZW',kwp:2}); renderEditor(); }
-function delGroup(i)  { S.grps.splice(i,1); renderEditor(); }
+function addGroup()  { S.grps.push({orient:'ZW',kwp:2}); renderEditor(); }
+function delGroup(i) { S.grps.splice(i,1); renderEditor(); }
 
 // ── NAVIGATIE ──────────────────────────────────────
 function switchView(n,el) {
@@ -322,6 +382,12 @@ function switchView(n,el) {
   document.getElementById('view-'+n).classList.add('active');
   el.classList.add('active');
   document.getElementById('scroll').scrollTop=0;
+}
+function switchProgTab(t) {
+  document.getElementById('tab-v').classList.toggle('active', t==='v');
+  document.getElementById('tab-m').classList.toggle('active', t==='m');
+  document.getElementById('prog-v').style.display = t==='v' ? '' : 'none';
+  document.getElementById('prog-m').style.display = t==='m' ? '' : 'none';
 }
 function saveSettings() {
   S.key  = document.getElementById('s-key').value.trim();
@@ -350,25 +416,19 @@ function zon(d) {
 function h2t(h){return`${Math.floor(h).toString().padStart(2,'0')}:${Math.round((h%1)*60).toString().padStart(2,'0')}`;}
 
 // ── SOLAR OPBRENGST MODEL ──────────────────────────
-// Per uur, per groep: kWp * basisintensiteit * bewolkingsfactor * oriëntatiefactor * azimuth-correctie
-// Geijkt op NED.nl Noord-Holland data (MW als relatieve schaal)
 function solarYield(z, cc, nedSolar) {
   const maxNed = Math.max(...nedSolar, 1);
   return Array.from({length:24},(_,h)=>{
     const frac=(h-z.op)/(z.ond-z.op);
     if(frac<=0||frac>=1) return {total:0,gs:S.grps.map(()=>0)};
-    const base = Math.sin(frac*Math.PI);           // parabool: piek op zonsmidag
+    const base = Math.sin(frac*Math.PI);
     const cloud = (cc[h]||0)/100;
-    const cf = 0.12 + 0.88*(1-cloud*0.87);        // diffuus licht bij bewolking
-    // NED.nl kalibratiefactor (gewogen gemiddelde model + data)
+    const cf = 0.12+0.88*(1-cloud*0.87);
     const nedNorm = nedSolar[h]/maxNed;
     const cal = base>0 ? (0.45*nedNorm+0.55*base)/base : 1;
     const gs = S.grps.map(g=>{
       const o=ORI.find(x=>x.code===g.orient)||ORI[0];
-      // Azimuth-gewicht: Oost produceert meer ochtend, West meer middag
-      const azRad=o.az*Math.PI/180;
-      const sunAz=(frac*Math.PI); // 0=Oost, π=West vereenvoudigd
-      const azW=Math.max(0.25, 0.25+0.75*Math.cos(azRad-sunAz-Math.PI/2));
+      const azW=Math.max(0.25, 0.25+0.75*Math.cos(o.az*Math.PI/180-frac*Math.PI-Math.PI/2));
       return Math.max(0,Math.round(g.kwp*base*cf*cal*o.f*azW*100)/100);
     });
     return {total:Math.round(gs.reduce((s,v)=>s+v,0)*100)/100, gs};
@@ -377,11 +437,18 @@ function solarYield(z, cc, nedSolar) {
 
 // ── NED.nl FETCH ──────────────────────────────────
 const NED='https://api.ned.nl/v1/utilizations';
-async function nedGet(point,type,cls){
-  const d=new Date();
-  const v=d.toISOString().slice(0,10);
-  const m=new Date(d.getTime()+864e5).toISOString().slice(0,10);
-  const p=new URLSearchParams({point,type,granularity:5,granularitytimezone:1,classification:cls,activity:1,'validfrom[after]':v,'validfrom[strictly_before]':m});
+
+// Geeft YYYY-MM-DD in Amsterdam-lokale tijd voor 'nu + offsetDagen'
+function nlDatum(off) {
+  const d=new Date(Date.now()+off*864e5);
+  const mo=d.getUTCMonth()+1;
+  const lok=new Date(d.getTime()+((mo>=4&&mo<=10)?2:1)*3600000);
+  return lok.toISOString().slice(0,10);
+}
+
+async function nedGet(point, type, cls, van, tot) {
+  const p=new URLSearchParams({point,type,granularity:5,granularitytimezone:1,
+    classification:cls,activity:1,'validfrom[after]':van,'validfrom[strictly_before]':tot});
   const r=await fetch(`${NED}?${p}`,{headers:{'X-AUTH-TOKEN':S.key,accept:'application/json'}});
   if(!r.ok) throw new Error(`NED ${r.status}`);
   const j=await r.json();
@@ -389,25 +456,71 @@ async function nedGet(point,type,cls){
 }
 function rh(rec){const dt=new Date(rec.validfrom);const mo=dt.getUTCMonth()+1;return(dt.getUTCHours()+((mo>=4&&mo<=10)?2:1))%24;}
 
-async function fetchData(){
-  if(!S.key) return {err:'no-key'};
-  try{
-    const [mix,solar]=await Promise.all([nedGet(0,27,1),nedGet(parseInt(S.prov),2,1)]);
-    const u=Array.from({length:24},(_,h)=>({h,co2:0,sNed:0}));
-    mix.forEach(r=>{const h=rh(r);if(h<24)u[h].co2=r.emissionfactor?Math.round(r.emissionfactor*1000):0;});
-    solar.forEach(r=>{const h=rh(r);if(h<24)u[h].sNed=r.capacity||0;});
-    if(u.filter(x=>x.co2>0).length<6)fallback(u);
-    const z=zon(new Date());
-    let cc=Array(24).fill(40);
-    try{const om=await fetch('https://api.open-meteo.com/v1/forecast?latitude=52.3676&longitude=4.9041&hourly=cloudcover&timezone=Europe%2FAmsterdam&forecast_days=1');if(om.ok){const d=await om.json();cc=d.hourly?.cloudcover||cc;}}catch(e){}
-    const sy=solarYield(z,cc,u.map(x=>x.sNed));
-    return {u,z,cc,sy,err:null};
-  }catch(e){console.error(e);return{err:e.message};}
+// Maak een lege uur-array voor één dag
+function mkU(){return Array.from({length:24},(_,h)=>({h,co2:0,sNed:0,isFcst:true,has:false}));}
+
+// Vul CO2: eerst forecast, dan actuele waarden overschrijven (betrouwbaarder)
+function fillCO2(u, fcst, curr) {
+  fcst.forEach(r=>{const h=rh(r);if(h<24&&r.emissionfactor){u[h].co2=Math.round(r.emissionfactor*1000);u[h].has=true;}});
+  if(curr) curr.forEach(r=>{const h=rh(r);if(h<24&&r.emissionfactor){u[h].co2=Math.round(r.emissionfactor*1000);u[h].isFcst=false;u[h].has=true;}});
+  // Realistisch NL-fallback alleen als NED.nl echt weinig data geeft
+  if(u.filter(x=>x.has).length<4){
+    const b=[220,210,205,205,205,210,225,240,235,195,155,125,115,118,128,158,198,228,248,258,252,242,232,224];
+    u.forEach((x,h)=>{if(!x.has)x.co2=b[h];});
+  }
 }
-function fallback(u){const b=[385,375,368,362,360,355,342,322,282,244,205,195,192,190,198,212,232,262,305,338,362,375,383,388];u.forEach((x,h)=>{if(!x.co2)x.co2=b[h];});}
+
+// ── KNMI WEER via Open-Meteo (HARMONIE AROME model) ──
+async function fetchWeer(){
+  const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=52.3676&longitude=4.9041'+
+    '&hourly=temperature_2m,precipitation,weathercode,windspeed_10m,winddirection_10m,cloudcover'+
+    '&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max,sunrise,sunset'+
+    '&timezone=Europe%2FAmsterdam&models=knmi_seamless&forecast_days=2');
+  if(!r.ok) throw new Error('Weer '+r.status);
+  return r.json();
+}
+
+async function fetchData() {
+  if(!S.key) return {err:'no-key'};
+  try {
+    const van=nlDatum(0), mor=nlDatum(1), over=nlDatum(2);
+
+    // Vandaag: forecast + actueel parallel; morgen: alleen forecast
+    const [mF,mC,sF,wr] = await Promise.all([
+      nedGet(0,27,1,van,mor),               // CO2 forecast vandaag
+      nedGet(0,27,2,van,mor),               // CO2 actueel vandaag
+      nedGet(parseInt(S.prov),2,1,van,mor), // Solar provincie forecast vandaag
+      fetchWeer(),                           // KNMI weer (vandaag + morgen)
+    ]);
+
+    const u=mkU();
+    fillCO2(u,mF,mC);
+    sF.forEach(r=>{const h=rh(r);if(h<24)u[h].sNed=r.capacity||0;});
+
+    const z=zon(new Date());
+    const cc=wr.hourly?.cloudcover?.slice(0,24)||Array(24).fill(40);
+    const sy=solarYield(z,cc,u.map(x=>x.sNed));
+    const datum=new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
+
+    // Morgen (forecast alleen)
+    const [mFm,sFm] = await Promise.all([
+      nedGet(0,27,1,mor,over).catch(()=>[]),
+      nedGet(parseInt(S.prov),2,1,mor,over).catch(()=>[]),
+    ]);
+    const um=mkU();
+    fillCO2(um,mFm,null);
+    sFm.forEach(r=>{const h=rh(r);if(h<24)um[h].sNed=r.capacity||0;});
+    const zm=zon(new Date(Date.now()+864e5));
+    const ccm=wr.hourly?.cloudcover?.slice(24,48)||Array(24).fill(40);
+    const sym=solarYield(zm,ccm,um.map(x=>x.sNed));
+    const morgenD=new Date(Date.now()+864e5).toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
+
+    return {u,z,cc,sy,datum, um,zm,sym,morgenD, wr, err:null};
+  } catch(e) { console.error(e); return {err:e.message}; }
+}
 
 // ── ANALYSE ────────────────────────────────────────
-function analyse(u,sy){
+function analyse(u,sy) {
   const nu=new Date().getHours();
   const co2=u.map(x=>x.co2);
   let bS=nu,bG=9999;
@@ -419,11 +532,11 @@ function analyse(u,sy){
   const dagTot=Math.round(tots.reduce((s,v)=>s+v,0)*10)/10;
   const spU=tots.map((v,i)=>v>=maxY*0.65?i:-1).filter(i=>i>=0);
   const spS=spU.length?Math.min(...spU):10, spE=spU.length?Math.max(...spU)+1:15;
-  const maxCO2=Math.max(...co2), minCO2=Math.min(...co2);
+  const maxCO2=Math.max(...co2);
   const sl=[...co2].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v).slice(0,3).map(x=>x.i).sort((a,b)=>a-b);
   const totKwp=S.grps.reduce((s,g)=>s+g.kwp,0);
   return{bS,bE:bS+3,bG:Math.round(bG),bStr:`${bS}:00–${bS+3}:00`,
-         maxCO2,minCO2,sl,hCO2:co2[nu]||co2[12],
+         maxCO2,sl,hCO2:co2[nu]||co2[12],
          maxY,piekU,dagTot,spS,spE,totKwp,
          besp:Math.round((1-bG/maxCO2)*100)};
 }
@@ -433,40 +546,100 @@ function tt(e,txt){const t=document.getElementById('tip');t.textContent=txt;t.st
 function ht(){document.getElementById('tip').style.display='none';}
 
 // ── RENDER DASHBOARD ───────────────────────────────
-function renderDash(d){
-  const {u,z,sy}=d;
+function renderDash(d) {
+  const {u,z,sy,wr}=d;
   const a=analyse(u,sy);
   const nu=new Date().getHours();
   const ci=co2i(a.hCO2);
-  const maxC=a.maxCO2+20, maxY=Math.max(...sy.map(s=>s.total),0.01);
+  const maxC=a.maxCO2+20;
+  const maxY=Math.max(...sy.map(s=>s.total),0.01);
+  const wh=wr.hourly, wd=wr.daily;
 
-  const co2bars=u.map(x=>{
+  // ── Weer uur-strip ──
+  const weerUren = Array.from({length:24},(_,h)=>{
+    const neer=wh.precipitation[h]>0.05?`${Math.round(wh.precipitation[h]*10)/10}mm`:'';
+    return `<div class="wu${h===nu?' nu':''}">
+      <div class="wu-t">${h}u</div>
+      <div class="wu-i">${wIco(wh.weathercode[h],h<6||h>21)}</div>
+      <div class="wu-c">${Math.round(wh.temperature_2m[h])}&#176;</div>
+      <div class="wu-r">${neer}</div>
+      <div class="wu-w">${Math.round(wh.windspeed_10m[h])}km</div>
+    </div>`;
+  }).join('');
+
+  // ── CO2 balken: verleden verblekt, gemeten-markering onderaan ──
+  const co2bars = u.map(x=>{
     const hp=Math.round((x.co2/maxC)*100);
-    const iB=x.h>=a.bS&&x.h<a.bE, iN=x.h===nu;
+    const iB=x.h>=a.bS&&x.h<a.bE, isNow=x.h===nu, isPast=x.h<nu;
     const kl=iB?'#22c55e':co2k(x.co2);
-    return`<div class="b${iN?' now':''}${iB?' best':''}" onmouseenter="tt(event,'${x.h}:00 — ${x.co2} gCO₂/kWh')" onmouseleave="ht()" ontouchstart="tt(event,'${x.h}:00 — ${x.co2} gCO₂/kWh')" ontouchend="ht()"><div class="bi" style="height:${hp}%;background:${kl};opacity:0.85;"></div><div class="bh">${x.h%4===0?x.h+'u':''}</div></div>`;
+    const measMark=!x.isFcst
+      ? `<div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:rgba(34,197,94,0.75);border-radius:0 0 3px 3px;"></div>`
+      : '';
+    return `<div class="b${isNow?' now':''}${iB?' best':''}${isPast?' past':''}"
+      onmouseenter="tt(event,'${x.h}:00 — ${x.co2} gCO₂/kWh${!x.isFcst?' ✓ gemeten':' (prognose)'}')"
+      onmouseleave="ht()" ontouchstart="tt(event,'${x.h}:00 — ${x.co2}g')" ontouchend="ht()">
+      <div class="bi" style="height:${hp}%;background:${kl};opacity:0.85;position:relative;">${measMark}</div>
+      <div class="bh">${x.h%4===0?x.h+'u':''}</div>
+    </div>`;
   }).join('');
 
-  const sbars=sy.map((s,h)=>{
+  // ── Solar balken: lineaire kleurschaal donkergoud→helder geel, verleden verblekt ──
+  const sbars = sy.map((s,h)=>{
     const pp=Math.round((s.total/maxY)*100);
-    const iN=h===nu, iP=h>=a.spS&&h<a.spE;
-    return`<div class="sb${iN?' now':''}" onmouseenter="tt(event,'${h}:00 — ${s.total} kWh')" onmouseleave="ht()" ontouchstart="tt(event,'${h}:00 — ${s.total} kWh')" ontouchend="ht()"><div class="sbi" style="height:${pp}%;background:${iP?'#f5c842':'#b07808'};opacity:${pp>0?0.88:0};"></div><div class="sbh">${h%4===0?h+'u':''}</div></div>`;
+    const isNow=h===nu, isPast=h<nu;
+    // Kleur schaalt lineair van donker (#7a5200) bij 0% naar helder (#f5c842) bij 100%
+    const rr=Math.round(122+(245-122)*pp/100);
+    const gg=Math.round( 82+(200- 82)*pp/100);
+    const bb=Math.round(  0+( 66-  0)*pp/100);
+    const kl=pp>0?`rgb(${rr},${gg},${bb})`:'transparent';
+    return `<div class="sb${isNow?' now':''}${isPast?' past':''}"
+      onmouseenter="tt(event,'${h}:00 — ${s.total} kWh')" onmouseleave="ht()"
+      ontouchstart="tt(event,'${h}:00 — ${s.total} kWh')" ontouchend="ht()">
+      <div class="sbi" style="height:${pp}%;background:${kl};"></div>
+      <div class="sbh">${h%4===0?h+'u':''}</div>
+    </div>`;
   }).join('');
 
-  const grpsH=S.grps.map((g,gi)=>{
+  const grpsH = S.grps.map((g,gi)=>{
     const gY=Math.round(sy.reduce((s,yr)=>s+(yr.gs[gi]||0),0)*10)/10;
     const o=ORI.find(x=>x.code===g.orient)||ORI[0];
     const pct=a.dagTot>0?Math.round(gY/a.dagTot*100):0;
-    const barW=Math.max(pct*0.8,3);
-    return`<div class="sg-row"><div class="sg-bar" style="width:${barW}px;background:#f5c842;opacity:0.75;"></div><span class="sg-lbl">${o.label}</span><span class="sg-kwp">${g.kwp} kWp</span><span class="sg-yield">≈ ${gY} kWh</span><span class="sg-pct">(${pct}%)</span></div>`;
+    return `<div class="sg-row">
+      <div class="sg-bar" style="width:${Math.max(pct*0.8,3)}px;background:#f5c842;opacity:0.75;"></div>
+      <span class="sg-lbl">${o.label}</span>
+      <span class="sg-kwp">${g.kwp} kWp</span>
+      <span class="sg-yield">&#8776; ${gY} kWh</span>
+      <span class="sg-pct">(${pct}%)</span>
+    </div>`;
   }).join('');
 
   document.getElementById('dash').innerHTML=`
+
+    <!-- KNMI WEER KAART -->
+    <div class="weer-card">
+      <div class="weer-top">
+        <div class="weer-now">
+          <div class="weer-icon">${wIco(wh.weathercode[nu],nu<6||nu>21)}</div>
+          <div>
+            <div class="weer-temp">${Math.round(wh.temperature_2m[nu])}&#176;C</div>
+            <div class="weer-desc">${wDesc(wh.weathercode[nu])}</div>
+          </div>
+        </div>
+        <div class="weer-meta">
+          <div class="wm-row">Max <span>${Math.round(wd.temperature_2m_max[0])}&#176;</span> / Min <span>${Math.round(wd.temperature_2m_min[0])}&#176;</span></div>
+          <div class="wm-row">Wind <span>${Math.round(wh.windspeed_10m[nu])} km/h ${wDir(wh.winddirection_10m[nu])}</span> Bft ${bft(wh.windspeed_10m[nu])}</div>
+          <div class="wm-row">Neerslag <span>${Math.round(wd.precipitation_sum[0]*10)/10} mm</span></div>
+          <div class="wm-row">&#9728; ${wd.sunrise[0].slice(11,16)} &#8594; ${wd.sunset[0].slice(11,16)}</div>
+        </div>
+      </div>
+      <div class="wu-wrap" id="wuw">${weerUren}</div>
+    </div>
+
     <div class="now-strip">
       <div class="now-item">
-        <div class="now-label">Nu · ${nu}:00</div>
+        <div class="now-label">CO&#8322; nu &#183; ${nu}:00</div>
         <div class="now-val" style="color:${ci.c};">${a.hCO2}</div>
-        <div class="now-unit">gCO₂/kWh</div>
+        <div class="now-unit">gCO&#8322;/kWh</div>
         <div class="now-badge" style="background:${ci.bg};color:${ci.c};">${ci.l}</div>
       </div>
       <div class="now-item">
@@ -484,16 +657,16 @@ function renderDash(d){
     </div>
 
     <div class="best-banner">
-      <div class="best-icon">⚡</div>
+      <div class="best-icon">&#9889;</div>
       <div class="best-text">
         <div class="best-title">Optimaal stroomvenster vandaag</div>
-        <div class="best-time">${a.bS}:00 – ${a.bE}:00</div>
-        <div class="best-sub">${a.bG} gCO₂/kWh · ${a.besp}% minder uitstoot dan het vuilste moment</div>
+        <div class="best-time">${a.bS}:00 &#8211; ${a.bE}:00</div>
+        <div class="best-sub">${a.bG} gCO&#8322;/kWh &#183; ${a.besp}% minder uitstoot dan het vuilste moment</div>
       </div>
-      <div class="best-pill">−${a.besp}%</div>
+      <div class="best-pill">&#8722;${a.besp}%</div>
     </div>
 
-    <div class="sh">CO₂-intensiteit per uur</div>
+    <div class="sh">CO&#8322;-intensiteit per uur &#8212; vandaag</div>
     <div class="chart-card">
       <div class="co2-bars">${co2bars}</div>
       <div class="co2-legend">
@@ -501,25 +674,26 @@ function renderDash(d){
         <div class="leg"><div class="ld" style="background:#86efac;"></div>&lt;200 goed</div>
         <div class="leg"><div class="ld" style="background:#f5c842;"></div>&lt;300 gemiddeld</div>
         <div class="leg"><div class="ld" style="background:#f07830;"></div>&lt;400 hoog</div>
-        <div class="leg"><div class="ld" style="background:#f05050;"></div>≥400 slecht</div>
+        <div class="leg"><div class="ld" style="background:#f05050;"></div>&#8805;400 slecht</div>
       </div>
     </div>
     <div class="thr-note">
-      Grenzen gebaseerd op de <strong>EU-taxonomie</strong> (&lt;100 g/kWh = "groen") en het <strong>Nederlandse jaargemiddelde</strong> van ±270 gCO₂/kWh (Ember/EEA 2023–2024).
+      Grenzen o.b.v. <strong>EU-taxonomie</strong> (&lt;100 g = groen) en <strong>NL-jaargemiddelde</strong> (~270 g, Ember/EEA 2024).
+      Verblekte balken = verstreken uren. Groene streep onderaan = gemeten actuele waarde (NED.nl).
     </div>
 
-    <div class="sh">Verwachte opbrengst zonnepanelen</div>
+    <div class="sh">Verwachte opbrengst zonnepanelen &#8212; vandaag</div>
     <div class="solar-card">
       <div class="solar-hdr">
         <div>
-          <div class="solar-ttl">☀ kWh-opbrengst per uur</div>
-          <div class="solar-sub">Op basis van oriëntatie, kWp en bewolkingsprognose</div>
+          <div class="solar-ttl">&#9728; kWh-opbrengst per uur</div>
+          <div class="solar-sub">KNMI bewolking &#183; ori&#235;ntatie &#183; kWp &#183; NED.nl solar</div>
         </div>
-        <div class="solar-tot">≈ ${a.dagTot} kWh vandaag</div>
+        <div class="solar-tot">&#8776; ${a.dagTot} kWh vandaag</div>
       </div>
       <div class="solar-bars">${sbars}</div>
       <div class="solar-times">
-        <span>00:00</span><span>↑ ${z.opS}</span><span>⊙ ${z.midS}</span><span>↓ ${z.ondS}</span><span>23:00</span>
+        <span>00:00</span><span>&#8593; ${z.opS}</span><span>&#8857; ${z.midS}</span><span>&#8595; ${z.ondS}</span><span>23:00</span>
       </div>
       <div class="solar-groups">${grpsH}</div>
       <div class="solar-stats">
@@ -531,55 +705,91 @@ function renderDash(d){
 
     <div class="sh">Aanbevelingen</div>
     <div class="tips">
-      <div class="tip g"><div class="ti">⚡</div><div>Beste moment voor vaatwasser, wasmachine of laadpaal: <strong>${a.bStr}</strong> — ${a.bG} gCO₂/kWh. Dat is <strong>${a.besp}% minder uitstoot</strong> dan het vuilste moment vandaag.</div></div>
-      <div class="tip y"><div class="ti">☀</div><div>Jouw panelen leveren het meest tussen <strong>${a.spS}:00 en ${a.spE}:00</strong> (piek ≈ ${maxY.toFixed(1)} kWh/uur). Gebruik zware apparaten dan voor <strong>100% eigen groene stroom</strong>.</div></div>
-      <div class="tip r"><div class="ti">⚠</div><div>Vermijd het net om <strong>${a.sl.map(h=>h+':00').join(', ')}</strong> — dan is het het vuilste (~${a.maxCO2} gCO₂/kWh, gas-piek).</div></div>
+      <div class="tip g"><div class="ti">&#9889;</div><div>Beste moment voor vaatwasser, wasmachine of laadpaal: <strong>${a.bStr}</strong> &#8212; ${a.bG} gCO&#8322;/kWh. Dat is <strong>${a.besp}% minder uitstoot</strong> dan het vuilste moment vandaag.</div></div>
+      <div class="tip y"><div class="ti">&#9728;</div><div>Jouw panelen leveren het meest tussen <strong>${a.spS}:00 en ${a.spE}:00</strong> (piek &#8776; ${maxY.toFixed(1)} kWh/uur). Gebruik zware apparaten dan voor <strong>100% eigen groene stroom</strong>.</div></div>
+      <div class="tip r"><div class="ti">&#9888;</div><div>Vermijd het net om <strong>${a.sl.map(h=>h+':00').join(', ')}</strong> &#8212; dan is het het vuilste (~${a.maxCO2} gCO&#8322;/kWh, gas-piek).</div></div>
     </div>
-    <div class="status-bar">Bron: NED.nl (TenneT/Gasunie) · Open-Meteo · ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</div>
+    <div class="status-bar">NED.nl (TenneT/Gasunie) &#183; KNMI HARMONIE AROME via Open-Meteo &#183; ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</div>
+  `;
+
+  // Scroll huidig uur in zicht in de weerstrip
+  setTimeout(()=>{
+    const sc=document.getElementById('wuw');
+    if(sc&&sc.children[nu]) sc.children[nu].scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
+  }, 120);
+}
+
+// ── RENDER PROGNOSE (gedeelde functie voor vandaag/morgen) ──
+function mkProgHTML(u, sy, z, label, isMorgen) {
+  const nu=new Date().getHours();
+  const co2=u.map(x=>x.co2);
+  const maxC=Math.max(...co2,1), maxY=Math.max(...sy.map(s=>s.total),0.01);
+  // Beste venster voor deze dag
+  let bS=0,bG=9999;
+  for(let i=0;i<=21;i++){const g=(co2[i]+co2[i+1]+co2[i+2])/3;if(g<bG){bG=g;bS=i;}}
+  const totY=Math.round(sy.reduce((s,x)=>s+x.total,0)*10)/10;
+
+  return `
+    <div style="font-size:10px;color:var(--muted);padding:8px 0 12px;line-height:1.6;">
+      <strong style="color:var(--text);">${label}</strong><br>
+      Beste CO&#8322;-venster: <strong style="color:#22c55e;">${bS}:00&#8211;${bS+3}:00</strong> (${Math.round(bG)} g/kWh)
+      &nbsp;&#183;&nbsp; Zonne-opbrengst: <strong style="color:var(--solar);">&#8776; ${totY} kWh</strong>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px;margin-bottom:14px;">
+      <div style="font-size:9px;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">
+        CO&#8322;-intensiteit gCO&#8322;/kWh
+        ${!isMorgen ? '<span style="color:#22c55e;margin-left:8px;">&#9646; groene streep = gemeten</span>' : '(prognose)'}
+      </div>
+      ${u.map(x=>{
+        const isPast=!isMorgen&&x.h<nu, isNow=!isMorgen&&x.h===nu, isBest=x.h>=bS&&x.h<bS+3;
+        return `<div class="pr" style="opacity:${isPast?0.5:1};">
+          <div class="pr-h" style="color:${isNow?'#22c55e':''};">${x.h}u${isNow?'&#8592;':''}</div>
+          <div class="pr-t">
+            <div class="pr-f" style="width:${Math.round(x.co2/maxC*100)}%;background:${isBest?'#22c55e':co2k(x.co2)};opacity:0.82;"></div>
+            ${!x.isFcst?'<div class="pr-m"></div>':''}
+          </div>
+          <div class="pr-v" style="color:${co2k(x.co2)};">${x.co2}g</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div style="background:#0d0d00;border:1px solid #2a2800;border-radius:var(--radius);padding:14px 12px;margin-bottom:14px;">
+      <div style="font-size:9px;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Opbrengst zonnepanelen kWh/uur</div>
+      ${sy.map((s,h)=>{
+        const isPast=!isMorgen&&h<nu;
+        return `<div class="pr" style="opacity:${isPast?0.4:1};">
+          <div class="pr-h">${h}u</div>
+          <div class="pr-t"><div class="pr-f" style="width:${Math.round(s.total/maxY*100)}%;background:#f5c842;opacity:0.82;"></div></div>
+          <div class="pr-v" style="color:#c8a020;">${s.total>0?s.total+' kWh':'&#8212;'}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="status-bar">NED.nl day-ahead &#183; KNMI HARMONIE via Open-Meteo</div>
   `;
 }
 
-// ── RENDER PROGNOSE ────────────────────────────────
-function renderProg(d){
-  const {u,sy}=d;
-  const a=analyse(u,sy);
-  const co2=u.map(x=>x.co2);
-  const maxC=Math.max(...co2,1), maxY=Math.max(...sy.map(s=>s.total),0.01);
-  document.getElementById('prog-content').innerHTML=`
-    <div class="sh" style="margin:0 0 12px;">Dag-overzicht per uur</div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px;margin-bottom:14px;">
-      <div style="font-size:9px;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">CO₂-intensiteit gCO₂/kWh</div>
-      ${u.map(x=>`<div class="pr"><div class="pr-h">${x.h}u</div><div class="pr-t"><div class="pr-f" style="width:${Math.round(x.co2/maxC*100)}%;background:${co2k(x.co2)};opacity:0.8;"></div></div><div class="pr-v" style="color:${co2k(x.co2)};">${x.co2}g</div></div>`).join('')}
-    </div>
-    <div style="background:#0d0d00;border:1px solid #2a2800;border-radius:var(--radius);padding:14px 12px;margin-bottom:14px;">
-      <div style="font-size:9px;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Opbrengst zonnepanelen (kWh/uur)</div>
-      ${sy.map((s,h)=>`<div class="pr"><div class="pr-h">${h}u</div><div class="pr-t"><div class="pr-f" style="width:${Math.round(s.total/maxY*100)}%;background:#f5c842;opacity:0.8;"></div></div><div class="pr-v" style="color:#c8a020;">${s.total>0?s.total+'':'—'}</div></div>`).join('')}
-    </div>
-    <div class="best-banner" style="margin:0 0 12px;">
-      <div class="best-icon">📊</div>
-      <div class="best-text">
-        <div class="best-title">Dag-totaal panelen</div>
-        <div class="best-time">≈ ${a.dagTot} kWh</div>
-        <div class="best-sub">Beste CO₂-venster: ${a.bStr} · ${a.bG} g/kWh</div>
-      </div>
-    </div>
-    <div class="status-bar">NED.nl day-ahead · eigen opbrengstmodel o.b.v. oriëntatie & bewolking</div>
-  `;
+function renderProg(d) {
+  document.getElementById('prog-v').innerHTML = mkProgHTML(d.u,  d.sy,  d.z,  d.datum,   false);
+  document.getElementById('prog-m').innerHTML = mkProgHTML(d.um, d.sym, d.zm, d.morgenD, true);
 }
 
 // ── HOOFD REFRESH ──────────────────────────────────
-async function refresh(){
+async function refresh() {
   const btn=document.getElementById('rbtn');
   btn.classList.add('spinning');
   document.getElementById('loading').style.display='flex';
-  document.getElementById('lmsg').textContent='Data ophalen van NED.nl...';
+  document.getElementById('lmsg').textContent='Data ophalen van NED.nl & KNMI...';
   document.getElementById('dash').style.display='none';
+
   const d=await fetchData();
   btn.classList.remove('spinning');
-  if(d.err==='no-key'){document.getElementById('lmsg').textContent='🔑 Vul je NED.nl API-sleutel in via ◎ Instellingen';return;}
-  if(d.err){document.getElementById('lmsg').textContent=`⚠ Fout: ${d.err}\nControleer je sleutel in Instellingen`;return;}
+
+  if(d.err==='no-key'){document.getElementById('lmsg').textContent='&#128273; Vul je NED.nl API-sleutel in via &#9678; Instellingen';return;}
+  if(d.err){document.getElementById('lmsg').textContent=`&#9888; Fout: ${d.err}\nControleer je sleutel in Instellingen`;return;}
+
   S.data=d;
-  document.getElementById('last-update').textContent=`Amsterdam · ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+  document.getElementById('last-update').textContent=`Amsterdam &#183; ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
   document.getElementById('loading').style.display='none';
   document.getElementById('dash').style.display='block';
   renderDash(d);

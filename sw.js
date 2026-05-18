@@ -1,5 +1,5 @@
 // Service Worker — Groene Stroom PWA
-const CACHE_NAME = 'groene-stroom-v2';
+const CACHE_NAME = 'groene-stroom-v3';
 const BASE = '/cotrack';
 const CACHE_STATIC = [
   BASE + '/',
