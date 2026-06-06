@@ -1,66 +1,16 @@
-// Service Worker — Groene Stroom PWA
-const CACHE_NAME = 'groene-stroom-v3';
+const CACHE_NAME = 'groene-stroom-v4';
 const BASE = '/cotrack';
-const CACHE_STATIC = [
-  BASE + '/',
-  BASE + '/index.html',
-  BASE + '/manifest.json',
-  BASE + '/icons/icon-192.png',
-  BASE + '/icons/icon-512.png',
-];
-
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(CACHE_STATIC).catch(() => {}))
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-
-  // NED.nl en Open-Meteo: Network First, cache als fallback
-  if (url.hostname === 'api.ned.nl' || url.hostname === 'api.open-meteo.com') {
-    event.respondWith(
-      fetch(event.request)
-        .then(resp => {
-          if (resp.ok) {
-            caches.open(CACHE_NAME).then(c => c.put(event.request, resp.clone()));
-          }
-          return resp;
-        })
-        .catch(() => caches.match(event.request))
-    );
+const CACHE_STATIC = [BASE+'/',BASE+'/index.html',BASE+'/manifest.json',BASE+'/icons/icon-192.png',BASE+'/icons/icon-512.png'];
+self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(CACHE_STATIC).catch(()=>{}))); self.skipWaiting(); });
+self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k))))); self.clients.claim(); });
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  if (url.hostname==='api.ned.nl'||url.hostname==='api.open-meteo.com') {
+    e.respondWith(fetch(e.request).then(r=>{if(r.ok)caches.open(CACHE_NAME).then(c=>c.put(e.request,r.clone()));return r;}).catch(()=>caches.match(e.request)));
     return;
   }
-
-  // Google Fonts: Cache First
-  if (url.hostname.includes('fonts.goog') || url.hostname.includes('fonts.gstat')) {
-    event.respondWith(
-      caches.match(event.request).then(c => c || fetch(event.request))
-    );
-    return;
+  if (url.hostname.includes('fonts.goog')||url.hostname.includes('fonts.gstat')) {
+    e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request))); return;
   }
-
-  // Lokale bestanden: Cache First
-  event.respondWith(
-    caches.match(event.request).then(cached =>
-      cached || fetch(event.request).then(resp => {
-        if (resp.ok && event.request.method === 'GET') {
-          caches.open(CACHE_NAME).then(c => c.put(event.request, resp.clone()));
-        }
-        return resp;
-      })
-    )
-  );
+  e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).then(r=>{if(r.ok&&e.request.method==='GET')caches.open(CACHE_NAME).then(c=>c.put(e.request,r.clone()));return r;})));
 });
